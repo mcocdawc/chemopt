@@ -1,0 +1,6 @@
+include *.md
+recursive-include src *.py 
+recursive-include docs/source *.rst
+
+
+global-exclude *.py[cod] __pycache__ *.so *.dylib
