@@ -20,6 +20,7 @@ def provide_default_settings():
     # Greatly increases performance if True, but could introduce bugs
     # if the Cartesian().xyz_frame is changed manually.
     settings = {}
+    settings['backend'] = 'molpro'
     settings['molpro'] = {}
     settings['molpro']['exe'] = 'molpro'
     # settings['viewer'] = 'avogadro'
