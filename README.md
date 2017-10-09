@@ -2,7 +2,8 @@ Overview
 ========
 
 
-A package for geometry optimization using non redundant internal coordinates (Zmatrices) and symbolic algebra.
+A package for geometry optimization using non redundant internal
+coordinates (Zmatrices) and symbolic algebra.
 
 
 Installation
@@ -20,7 +21,7 @@ https://chemopt.readthedocs.io/
 Development
 ===========
 
-To run the all tests run::
+To run the tests run in the repository:
 
 ```
 pytest
