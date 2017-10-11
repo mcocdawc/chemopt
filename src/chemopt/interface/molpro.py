@@ -19,8 +19,6 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
 
-    return input_str
-
     input_path = base_filename + '.inp'
     output_path = base_filename + '.out'
     with open(input_path, 'w') as f:
