@@ -57,3 +57,5 @@ def _extract_C_rad(zmolecule):
     C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
     C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
     return C_rad.flatten(order='F')
+
+# test
