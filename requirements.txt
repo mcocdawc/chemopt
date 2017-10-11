@@ -1,1 +1,2 @@
 chemcoord>=0.2
+cclib
