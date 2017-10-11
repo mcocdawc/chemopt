@@ -16,16 +16,10 @@ def _give_default_file_path():
 
 def provide_default_settings():
     settings = {}
-    # The Cartesian().get_bonds() method will use or not use a lookup.
-    # Greatly increases performance if True, but could introduce bugs
-    # if the Cartesian().xyz_frame is changed manually.
     settings = {}
     settings['backend'] = 'molpro'
     settings['molpro'] = {}
     settings['molpro']['exe'] = 'molpro'
-    # settings['viewer'] = 'avogadro'
-    # settings['viewer'] = 'molden'
-    # settings['viewer'] = 'jmol'
     return settings
 
 
@@ -40,7 +34,7 @@ def write_configuration_file(filepath=_give_default_file_path(),
 
     Args:
         filepath (str): Where to write the file.
-            The default is under both UNIX and Windows ``~/.chemcoordrc``.
+            The default is under both UNIX and Windows ``~/.chemoptrc``.
         overwrite (bool):
 
     Returns:
@@ -67,7 +61,7 @@ def read_configuration_file(filepath=_give_default_file_path()):
 
     Args:
         filepath (str): Where to read the file.
-            The default is under both UNIX and Windows ``~/.chemcoordrc``.
+            The default is under both UNIX and Windows ``~/.chemoptrc``.
 
     Returns:
         None:
