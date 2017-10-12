@@ -7,6 +7,26 @@ except ImportError:
 import os
 from warnings import warn
 
+from chemopt.utilities._decorators import Substitution
+
+
+values = {}
+values['basis'] = ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
+                   '6-31+G(d)', '6-311G(d)', 'cc-pVDZ', 'cc-pVTZ',
+                   'AUG-cc-pVDZ', 'AUG-cc-pVTZ']
+values['theory'] = ['RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)']
+values['calculation_type'] = [
+    'Single Point', 'Equilibrium Geometry', 'Frequencies']
+values['backend'] = 'molpro'
+
+fixed_defaults = {}
+fixed_defaults['charge'] = 0
+fixed_defaults['multiplicity'] = 1
+fixed_defaults['calculation_type'] = 'Single Point'
+fixed_defaults['forces'] = False
+fixed_defaults['wfn_symmetry'] = 1
+fixed_defaults['title'] = ''
+
 
 def _give_default_file_path():
     HOME = os.path.expanduser('~')
@@ -14,20 +34,18 @@ def _give_default_file_path():
     return filepath
 
 
-def provide_default_settings():
-    settings = {}
-    settings = {}
-    settings['backend'] = 'molpro'
-    settings['molpro'] = {}
-    settings['molpro']['exe'] = 'molpro'
-    return settings
+def provide_defaults():
+    conf_defaults = {}
+    conf_defaults['backend'] = 'molpro'
+    conf_defaults['molpro_exe'] = 'molpro'
+    return conf_defaults
 
 
 def write_configuration_file(filepath=_give_default_file_path(),
                              overwrite=False):
     """Create a configuration file.
 
-    Writes the current state of settings into a configuration file.
+    Writes the current state of defaults into a configuration file.
 
     .. note:: Since a file is permamently written, this function
         is strictly speaking not sideeffect free.
@@ -41,7 +59,7 @@ def write_configuration_file(filepath=_give_default_file_path(),
         None:
     """
     config = configparser.ConfigParser()
-    config.read_dict(settings)
+    config.read_dict(conf_defaults)
 
     if os.path.isfile(filepath) and not overwrite:
         try:
@@ -53,10 +71,10 @@ def write_configuration_file(filepath=_give_default_file_path(),
             config.write(configfile)
 
 
-def read_configuration_file(filepath=_give_default_file_path()):
+def read_configuration_file(conf_defaults, filepath=_give_default_file_path()):
     """Read the configuration file.
 
-    .. note:: This function changes ``cc.settings`` inplace and is
+    .. note:: This function changes ``cc.defaults`` inplace and is
         therefore not sideeffect free.
 
     Args:
@@ -89,10 +107,54 @@ def read_configuration_file(filepath=_give_default_file_path()):
             return getstring(section, key, config)
 
     for section in config.sections():
-        for key in config[section]:
-            settings[section][key] = get_correct_type(section, key, config)
-    return settings
+        for k in config[section]:
+            conf_defaults[section][k] = get_correct_type(section, k, config)
+    return conf_defaults
 
 
-settings = provide_default_settings()
-read_configuration_file()
+conf_defaults = provide_defaults()
+read_configuration_file(conf_defaults)
+
+
+def get_docstr(key, defaults):
+    return "The default is '{}'. The allowed values are {}".format(
+        defaults[key], values[key])
+
+
+docstring = {}
+
+docstring['theory'] = "The theory to use for calculating the electonic energy. \
+The allowed values are {}.\n".format(values['theory'])
+
+docstring['basis'] = "The basis set to use for calculating \
+the electronic energy. The allowed values are {}.\n".format(values['basis'])
+
+docstring['calculation_type'] = get_docstr('calculation_type', fixed_defaults)
+
+docstring['multiplicity'] = "The spin multiplicity. \
+The default is {}.\n".format(fixed_defaults['multiplicity'])
+
+docstring['charge'] = "The overall charge of the molecule. \
+The default is {}.\n".format(fixed_defaults['charge'])
+
+docstring['forces'] = "Specify if energy gradients should be calculated. \
+The default is {}.".format(fixed_defaults['forces'])
+
+docstring['base_filename'] = "Specify the base filename. \
+The input file be ``base_filename.inp``,\
+the output will be ``base_filename.out``.\n"
+
+
+docstring['backend'] = "Specify which QM program suite shoud be used. \
+Allowed values are {}, \
+the default is '{}'.\n".format(values['backend'], conf_defaults['backend'])
+
+docstring['molpro_exe'] = "Specify the command to invoke molpro. \
+The default is '{}'.\n".format(conf_defaults['molpro_exe'])
+
+docstring['title'] = "The title to be printed in input and output.\n"
+
+docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
+with the molpro \
+`notation <https://www.molpro.net/info/2015.1/doc/manual/node36.html>`_.\n"
+substitute_docstr = Substitution(**docstring)

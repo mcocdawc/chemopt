@@ -14,3 +14,4 @@ def export(func):
 import chemopt.interface
 import chemopt.configuration
 import chemopt.zmat_optimisation
+import chemopt.utilities

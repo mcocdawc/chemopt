@@ -3,31 +3,45 @@ from subprocess import run
 
 import cclib
 
+import chemcoord as cc
 
-from chemopt.configuration import settings
+
+from chemopt.configuration import (conf_defaults, fixed_defaults,
+                                   substitute_docstr)
 
 
+@substitute_docstr
 def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
-              charge=0, calculation_type='Single Point', forces=False,
-              title='', multiplicity=1, wfn_symmetry=1):
-    """Optimize a molecule.
+              charge=fixed_defaults['charge'],
+              calculation_type=fixed_defaults['calculation_type'],
+              forces=fixed_defaults['forces'],
+              title=fixed_defaults['title'],
+              multiplicity=fixed_defaults['multiplicity'],
+              wfn_symmetry=fixed_defaults['wfn_symmetry']):
+    """Calculate the energy of a molecule using Molpro.
 
     Args:
-        frame (pd.DataFrame): A Dataframe with at least the
-            columns ``['atom', 'x', 'y', 'z']``.
-            Where ``'atom'`` is a string for the elementsymbol.
-        atoms (sequence): A list of strings. (Elementsymbols)
-        coords (sequence): A ``n_atoms * 3`` array containg the positions
-            of the atoms. Note that atoms and coords are mutually exclusive
-            to frame. Besides atoms and coords have to be both either None
-            or not None.
+        base_filename (str): {base_filename}
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        theory (str): {theory}
+        basis (str): {basis}
+        molpro_exe (str): {molpro_exe}
+        charge (int): {charge}
+        calculation_type (str): {calculation_type}
+        forces (bool): {forces}
+        title (str): {title}
+        multiplicity (int): {multiplicity}
+        wfn_symmetry (int): {wfn_symmetry}
+
 
     Returns:
-        Cartesian: A new cartesian instance.
+        :class:`chemcoord.Cartesian`: A cclib Molpro-Parser instance.
     """
     if molpro_exe is None:
-        molpro_exe = settings['molpro']['exe']
+        molpro_exe = conf_defaults['molpro_exe']
 
+    if isinstance(molecule, cc.Zmat):
+        molecule = molecule.get_cartesian()
     input_str = generate_input_file(
         molecule=molecule, theory=theory, basis=basis, charge=charge,
         calculation_type=calculation_type, forces=forces,
