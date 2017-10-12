@@ -64,7 +64,8 @@ def parse_output(output_path):
         output_path (str):
 
     Returns:
-        :class:`chemcoord.Cartesian`: A cclib Molpro-Parser instance.
+        cclib.Parser : A `cclib <https://cclib.github.io/>`_
+        parsed data instance.
     """
     return cclib.parser.molproparser.Molpro(output_path).parse()
 
