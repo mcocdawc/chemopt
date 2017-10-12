@@ -1,4 +1,4 @@
-chemopt\.interface\.molpro\.parse\_output
+parse\_output
 =========================================
 
 .. currentmodule:: chemopt.interface.molpro

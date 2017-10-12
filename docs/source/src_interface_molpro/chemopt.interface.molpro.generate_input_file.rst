@@ -1,4 +1,4 @@
-chemopt\.interface\.molpro\.generate\_input\_file
+generate\_input\_file
 =================================================
 
 .. currentmodule:: chemopt.interface.molpro

@@ -16,7 +16,7 @@ def calculate(molecule, theory, basis,
               forces=fixed_defaults['forces'],
               title=fixed_defaults['title'],
               multiplicity=fixed_defaults['multiplicity'],
-              wfn_symmetry=fixed_defaults['wfn_symmetry'], **kwargs):
+              **kwargs):
     """Calculate the energy of a molecule.
 
     Args:
@@ -30,8 +30,6 @@ def calculate(molecule, theory, basis,
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
-        wfn_symmetry (int): {wfn_symmetry}
-
 
     Returns:
         cclib.Parser : A `cclib <https://cclib.github.io/>`_

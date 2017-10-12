@@ -10,7 +10,6 @@ def convert(x):
     return convertor(x, 'hartree', 'eV') / convertor(1, 'bohr', 'Angstrom')
 
 
-@export
 def optimise(zmolecule, symbols=None, **kwargs):
     """Optimize a molecule.
 

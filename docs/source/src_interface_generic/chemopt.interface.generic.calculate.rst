@@ -1,4 +1,4 @@
-chemopt\.interface\.generic\.calculate
+calculate
 ======================================
 
 .. currentmodule:: chemopt.interface.generic

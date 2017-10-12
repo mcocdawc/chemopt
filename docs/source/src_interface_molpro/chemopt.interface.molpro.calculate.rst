@@ -1,4 +1,4 @@
-chemopt.interface.molpro.calculate
+calculate
 ==================================
 
 .. currentmodule:: chemopt.interface.molpro

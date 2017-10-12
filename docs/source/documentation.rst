@@ -1,6 +1,19 @@
 Documentation
 ==================
 
+Optimiser
++++++++++++++
+
+In non-redundant internal coordinates (Zmatrix)
+------------------------------------------------
+
+.. currentmodule:: chemopt.zmat_optimisation
+
+.. autosummary::
+    :toctree: src_zmat_optimiser
+
+    optimise
+
 
 Interfaces for electronic structure calculation
 +++++++++++++++++++++++++++++++++++++++++++++++++
