@@ -1,11 +1,9 @@
 import subprocess
 from subprocess import run
 
-import cclib
-
 import chemcoord as cc
 
-
+import cclib
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
@@ -35,7 +33,8 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
 
 
     Returns:
-        :class:`chemcoord.Cartesian`: A cclib Molpro-Parser instance.
+        cclib.Parser : A `cclib <https://cclib.github.io/>`_
+        parsed data instance.
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
@@ -59,20 +58,13 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
 
 
 def parse_output(output_path):
-    """Optimize a molecule.
+    """Parse a molpro output file.
 
     Args:
-        frame (pd.DataFrame): A Dataframe with at least the
-            columns ``['atom', 'x', 'y', 'z']``.
-            Where ``'atom'`` is a string for the elementsymbol.
-        atoms (sequence): A list of strings. (Elementsymbols)
-        coords (sequence): A ``n_atoms * 3`` array containg the positions
-            of the atoms. Note that atoms and coords are mutually exclusive
-            to frame. Besides atoms and coords have to be both either None
-            or not None.
+        output_path (str):
 
     Returns:
-        Cartesian: A new cartesian instance.
+        :class:`chemcoord.Cartesian`: A cclib Molpro-Parser instance.
     """
     return cclib.parser.molproparser.Molpro(output_path).parse()
 
@@ -81,6 +73,21 @@ def generate_input_file(molecule, theory, basis, charge=0,
                         calculation_type='Single Point', forces=False,
                         title='', multiplicity=1, wfn_symmetry=1):
     """Generate a molpro input file.
+
+    Args:
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        theory (str): {theory}
+        basis (str): {basis}
+        charge (int): {charge}
+        calculation_type (str): {calculation_type}
+        forces (bool): {forces}
+        title (str): {title}
+        multiplicity (int): {multiplicity}
+        wfn_symmetry (int): {wfn_symmetry}
+
+
+    Returns:
+        str : Molpro input.
     """
     get_output = """\
 *** {title}

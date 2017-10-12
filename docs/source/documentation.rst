@@ -2,14 +2,29 @@ Documentation
 ==================
 
 
-Contents:
+Interfaces for electronic structure calculation
++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Interfaces
-++++++++++
+Generic Interface
+------------------
 
-.. currentmodule:: chemopt.interface
 
-.. toctree::
-    :maxdepth: 1
+.. currentmodule:: chemopt.interface.generic
 
-    molpro
+.. autosummary::
+    :toctree: src_interface_generic
+
+    calculate
+
+
+Molpro Interface
+------------------
+
+.. currentmodule:: chemopt.interface.molpro
+
+.. autosummary::
+    :toctree: src_interface_molpro
+
+    calculate
+    generate_input_file
+    parse_output

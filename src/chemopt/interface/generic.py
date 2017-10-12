@@ -1,12 +1,16 @@
-from . import molpro
+import chemcoord as cc
+
 from chemopt import export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
+from . import molpro
+
 
 @export
 @substitute_docstr
-def calculate(base_filename, molecule, theory, basis, backend=None,
+def calculate(molecule, theory, basis,
+              base_filename, backend=None,
               charge=fixed_defaults['charge'],
               calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
@@ -16,13 +20,11 @@ def calculate(base_filename, molecule, theory, basis, backend=None,
     """Calculate the energy of a molecule.
 
     Args:
-        base_filename (str): {base_filename}
-        molecule (:class:`~chemcoord.Cartesian`):
-            A molecule in cartesian coordinates.
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
         theory (str): {theory}
         basis (str): {basis}
+        base_filename (str): {base_filename}
         backend (str): {backend}
-        molpro_exe (str): {molpro_exe}
         charge (int): {charge}
         calculation_type (str): {calculation_type}
         forces (bool): {forces}
@@ -32,10 +34,13 @@ def calculate(base_filename, molecule, theory, basis, backend=None,
 
 
     Returns:
-        :class:`chemcoord.Cartesian`: A new cartesian instance.
+        cclib.Parser : A `cclib <https://cclib.github.io/>`_
+        parsed data instance.
     """
     if backend is None:
         backend = conf_defaults['backend']
+    if isinstance(molecule, cc.Zmat):
+        molecule = molecule.get_cartesian()
     if backend == 'molpro':
         return molpro.calculate(
             base_filename=base_filename, molecule=molecule,

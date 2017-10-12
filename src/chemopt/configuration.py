@@ -17,7 +17,7 @@ values['basis'] = ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
 values['theory'] = ['RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)']
 values['calculation_type'] = [
     'Single Point', 'Equilibrium Geometry', 'Frequencies']
-values['backend'] = 'molpro'
+values['backend'] = {'molpro'}
 
 fixed_defaults = {}
 fixed_defaults['charge'] = 0
@@ -141,7 +141,7 @@ docstring['forces'] = "Specify if energy gradients should be calculated. \
 The default is {}.".format(fixed_defaults['forces'])
 
 docstring['base_filename'] = "Specify the base filename. \
-The input file be ``base_filename.inp``,\
+The input file be ``base_filename.inp``, \
 the output will be ``base_filename.out``.\n"
 
 
