@@ -70,6 +70,7 @@ def parse_output(output_path):
     return cclib.parser.molproparser.Molpro(output_path).parse()
 
 
+@substitute_docstr
 def generate_input_file(molecule, theory, basis, charge=0,
                         calculation_type='Single Point', forces=False,
                         title='', multiplicity=1, wfn_symmetry=1):
