@@ -114,6 +114,7 @@ Starting {time}
 
     table_header = '|{:>4}| {:^16} | {:^16} |\n'.format(
         'n', 'energy [eV]', 'delta [eV]')
+    table_header += len(table_header) * '-'
     header = get_header(
         version='0.1.0', title=title, zmat=zmolecule.to_zmat(),
         cartesian=zmolecule.get_cartesian().to_xyz(),
