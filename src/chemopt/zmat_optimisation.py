@@ -42,7 +42,7 @@ def _extract_C_rad(zmolecule):
     return C_rad.flatten(order='F')
 
 
-def _create_V_function(zmolecule, outputfile, **kwargs):
+def _create_V_function(zmolecule, output, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad, calculated=[], get_calculated=False):
@@ -62,6 +62,8 @@ def _create_V_function(zmolecule, outputfile, **kwargs):
 
         grad_energy_C = grad_energy_C.flatten()
         calculated.append((zmolecule, energy, grad_energy_C))
+        with open(output, 'a') as f:
+            f.write(_get_table_row(calculated))
         if get_calculated:
             return calculated
         else:
@@ -120,5 +122,16 @@ Starting {time}
         backend=backend, theory=theory, basis=basis,
         charge=charge, multiplicity=multiplicity,
         time=datetime.datetime.now().replace(microsecond=0).isoformat(),
-        table_header='{:>4},  {:^16},  {:^16}'.format('n', 'energy', 'Delta'))
+        table_header='{:>4},  {:^16},  {:^16}'.format('n', 'energy [eV]',
+                                                      'delta [eV]'))
     return header
+
+
+def _get_table_row(calculated):
+    n = len(calculated)
+    energy = calculated[-1][1]
+    if n == 1:
+        delta = 0.
+    else:
+        delta = energy - calculated[-2][1]
+    return '{:>4},  {:16.10f},  {:16.10f}'.format(n, energy, delta)
