@@ -91,39 +91,36 @@ def _create_header(zmolecule, theory, basis,
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
-This is ChemOpt {version} optimising a molecule in internal coordinates.
-========================================================================
+# This is ChemOpt {version} optimising a molecule in internal coordinates.
 
-
-Starting structure as Zmatrix
-+++++++++++++++++++++++++++++
+## Structures
+### Starting structure as Zmatrix
 {zmat}
 
-Starting structure in cartesian coordinates
-+++++++++++++++++++++++++++++++++++++++++++
+### Starting structure in cartesian coordinates
 {cartesian}
 
-Setup for the electronic calculations
-+++++++++++++++++++++++++++++++++++++
+## Setup for the electronic calculations
 Backend: {backend}
 Theory: {theory}
 Basis: {basis}
 Charge: {charge}
 Spin multiplicity: {multiplicity}
 
+## Results
 Starting {time}
-+++++++++++++++
 {table_header}
 """.format
 
+    table_header = '|{:>4}| {:^16} | {:^16} |\n'.format(
+        'n', 'energy [eV]', 'delta [eV]')
     header = get_header(
         version='0.1.0', title=title, zmat=zmolecule.to_zmat(),
         cartesian=zmolecule.get_cartesian().to_xyz(),
         backend=backend, theory=theory, basis=basis,
         charge=charge, multiplicity=multiplicity,
         time=datetime.datetime.now().replace(microsecond=0).isoformat(),
-        table_header='{:>4},  {:^16},  {:^16}'.format('n', 'energy [eV]',
-                                                      'delta [eV]'))
+        table_header=table_header)
     return header
 
 
@@ -134,4 +131,12 @@ def _get_table_row(calculated):
         delta = 0.
     else:
         delta = energy - calculated[-2][1]
-    return '{:>4},  {:16.10f},  {:16.10f}\n'.format(n, energy, delta)
+    return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
+
+# def _create_finish():
+#     get_output = """\
+# The calculation finished after
+#
+#     """
+#     return output
+#
