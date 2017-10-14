@@ -3,8 +3,10 @@ import numpy as np
 from scipy.optimize import minimize
 
 from cclib.parser.utils import convertor
-from chemopt import export
+# from chemopt import export
+from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
+import datetime
 
 
 def convert(x):
@@ -28,7 +30,8 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
     V = _create_V_function(zmolecule, output, **kwargs)
-    create_output(output, zmolecule, **kwargs)
+    with open(output, 'x') as f:
+        f.write(_create_header(zmolecule, **kwargs))
     opt = minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
     return opt
 
@@ -78,27 +81,44 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def create_ouput(output, zmolecule, **kwargs):
-    header = """\
-This is ChemOpt {version} ptimising a molecule in internal coordinates.
+def _create_header(zmolecule, theory, basis,
+                   backend=None,
+                   charge=fixed_defaults['charge'],
+                   title=fixed_defaults['title'],
+                   multiplicity=fixed_defaults['multiplicity']):
+    if backend is None:
+        backend = conf_defaults['backend']
+    get_header = """\
+This is ChemOpt {version} optimising a molecule in internal coordinates.
+========================================================================
 
-Structure as Zmatrix:
+
+Starting structure as Zmatrix
++++++++++++++++++++++++++++++
 {zmat}
-Structure in cartesian coordinates:
+
+Starting structure in cartesian coordinates
++++++++++++++++++++++++++++++++++++++++++++
 {cartesian}
 
-The setup for the electronic calculation is:
+Setup for the electronic calculations
++++++++++++++++++++++++++++++++++++++
 Backend: {backend}
 Theory: {theory}
 Basis: {basis}
 Charge: {charge}
-Multiplicity: {multiplicity}
+Spin multiplicity: {multiplicity}
 
-Starting at {time}:
-n energy Δ
-""".format(version=chemopt.__version__, zmat=zmolecule.to_zmat(),
-           cartesian=zmolecule.get_cartesian().to_xyz(),
-           time=time.asctime(), **kwargs)
+Starting {time}
++++++++++++++++
+{table_header}
+""".format
 
-    with open(output, 'x') as f:
-        f.write(header)
+    header = get_header(
+        version='0.1.0', title=title, zmat=zmolecule.to_zmat(),
+        cartesian=zmolecule.get_cartesian().to_xyz(),
+        backend=backend, theory=theory, basis=basis,
+        charge=charge, multiplicity=multiplicity,
+        time=datetime.datetime.now().replace(microsecond=0).isoformat(),
+        table_header='{:>4},  {:^16},  {:^16}'.format('n', 'energy', 'Delta'))
+    return header
