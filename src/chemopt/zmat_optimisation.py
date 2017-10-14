@@ -117,7 +117,7 @@ Starting {time}
         'n', 'energy [eV]', 'delta [eV]')
     table_header += len(table_header) * '-'
     header = get_header(
-        version='0.1.0', title=title, zmat=_get_markdown(zmolecule.to_zmat()),
+        version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
         cartesian=_get_markdown(zmolecule.get_cartesian()),
         backend=backend, theory=theory, basis=basis,
         charge=charge, multiplicity=multiplicity,
