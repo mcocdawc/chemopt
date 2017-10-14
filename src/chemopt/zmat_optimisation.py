@@ -30,7 +30,7 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
     V = _create_V_function(zmolecule, output, **kwargs)
-    with open(output, 'x') as f:
+    with open(output, 'w') as f:
         f.write(_create_header(zmolecule, **kwargs))
     opt = minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
     return opt
