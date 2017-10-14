@@ -7,7 +7,7 @@ from cclib.parser.utils import convertor
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 import datetime
-import tabulate
+from tabulate import tabulate
 
 
 def convert(x):
@@ -102,33 +102,38 @@ def _create_header(zmolecule, theory, basis,
 {cartesian}
 
 ## Setup for the electronic calculations
-Backend: {backend}
-Theory: {theory}
-Basis: {basis}
-Charge: {charge}
-Spin multiplicity: {multiplicity}
+{electronic_calculation_setup}
 
-## Results
-Starting {time}
+## Iterations
+Starting {time}:
+
 {table_header}
 """.format
 
     table_header = '|{:>4}| {:^16} | {:^16} |\n'.format(
         'n', 'energy [eV]', 'delta [eV]')
-    table_header += len(table_header) * '-'
+    table_header += '|----|------------------|------------------|'
+
+    calculation_setup = _get_calc_setup(backend, theory, charge, multiplicity)
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
         cartesian=_get_markdown(zmolecule.get_cartesian()),
-        backend=backend, theory=theory, basis=basis,
-        charge=charge, multiplicity=multiplicity,
+        electronic_calculation_setup=calculation_setup,
         time=datetime.datetime.now().replace(microsecond=0).isoformat(),
         table_header=table_header)
     return header
 
 
+def _get_calc_setup(backend, theory, charge, multiplicity):
+    data = [['Theory', theory],
+            ['Charge', charge],
+            ['Multiplicity', multiplicity]]
+    return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
+
+
 def _get_markdown(molecule):
     data = molecule._frame
-    return tabulate.tabulate(data, tablefmt='pipe', headers=data.columns)
+    return tabulate(data, tablefmt='pipe', headers=data.columns)
 
 
 def _get_table_row(calculated):
