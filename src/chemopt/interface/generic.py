@@ -44,6 +44,6 @@ def calculate(molecule, theory, basis,
             base_filename=base_filename, molecule=molecule,
             theory=theory, basis=basis, charge=charge,
             calculation_type=calculation_type, forces=forces, title=title,
-            multiplicity=multiplicity, wfn_symmetry=wfn_symmetry, **kwargs)
+            multiplicity=multiplicity, **kwargs)
     else:
         raise ValueError('Backend {} is not implemented.'.format(backend))
