@@ -85,7 +85,7 @@ def _create_header(zmolecule, theory, basis,
                    backend=None,
                    charge=fixed_defaults['charge'],
                    title=fixed_defaults['title'],
-                   multiplicity=fixed_defaults['multiplicity']):
+                   multiplicity=fixed_defaults['multiplicity'], **kwargs):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
