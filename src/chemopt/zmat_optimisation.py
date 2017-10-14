@@ -7,6 +7,7 @@ from cclib.parser.utils import convertor
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 import datetime
+import tabulate
 
 
 def convert(x):
@@ -116,13 +117,18 @@ Starting {time}
         'n', 'energy [eV]', 'delta [eV]')
     table_header += len(table_header) * '-'
     header = get_header(
-        version='0.1.0', title=title, zmat=zmolecule.to_zmat(),
-        cartesian=zmolecule.get_cartesian().to_xyz(),
+        version='0.1.0', title=title, zmat=_get_markdown(zmolecule.to_zmat()),
+        cartesian=_get_markdown(zmolecule.get_cartesian()),
         backend=backend, theory=theory, basis=basis,
         charge=charge, multiplicity=multiplicity,
         time=datetime.datetime.now().replace(microsecond=0).isoformat(),
         table_header=table_header)
     return header
+
+
+def _get_markdown(molecule):
+    data = molecule._frame
+    return tabulate.tabulate(data, tablefmt='pipe', headers=data.columns)
 
 
 def _get_table_row(calculated):
