@@ -1,4 +1,5 @@
-import time
+from datetime import datetime
+
 import numpy as np
 from scipy.optimize import minimize
 
@@ -6,12 +7,7 @@ from cclib.parser.utils import convertor
 # from chemopt import export
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
-import datetime
 from tabulate import tabulate
-
-
-def convert(x):
-    return convertor(x, 'hartree', 'eV') / convertor(1, 'bohr', 'Angstrom')
 
 
 def optimise(zmolecule, output, symbols=None, **kwargs):
@@ -33,8 +29,9 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
     V = _create_V_function(zmolecule, output, **kwargs)
     with open(output, 'w') as f:
         f.write(_create_header(zmolecule, **kwargs))
-    opt = minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
-    return opt
+    minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
+    calculated = V(get_calculated=True)
+    return calculated
 
 
 def _extract_C_rad(zmolecule):
@@ -44,44 +41,56 @@ def _extract_C_rad(zmolecule):
 
 
 def _create_V_function(zmolecule, output, **kwargs):
-    get_zm_from_C = _get_zm_from_C_generator(zmolecule)
+    # get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad, calculated=[], get_calculated=False):
-        zmolecule = get_zm_from_C(C_rad)
-
-        result = calculate(molecule=zmolecule, forces=True, **kwargs)
-        energy = result.scfenergies[0]
-        grad_energy_X = convert(result.grads[0])
-
-        grad_X = zmolecule.get_grad_cartesian(
-            as_function=False, drop_auto_dummies=True)
-        grad_energy_C = np.sum(
-            grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
-
-        for i in range(min(3, grad_energy_C.shape[0])):
-            grad_energy_C[i, i:] = 0
-
-        grad_energy_C = grad_energy_C.flatten()
-        calculated.append((zmolecule, energy, grad_energy_C))
-        with open(output, 'a') as f:
-            f.write(_get_table_row(calculated))
         if get_calculated:
             return calculated
         else:
-            return energy, grad_energy_C
+            if calculated:
+                zmolecule = get_zm_from_C(
+                    C_rad, previous_zm=calculated[-1]{'zmolecule'})
+            else:
+                # zmolecule from outer scope
+                pass
+
+            result = calculate(molecule=zmolecule, forces=True, **kwargs)
+            energy = convertor(result.scfenergies[0], 'eV', 'hartree')
+            grad_energy_X = result.grads[0]
+
+            grad_X = zmolecule.get_grad_cartesian(
+                as_function=False, drop_auto_dummies=True)
+            grad_energy_C = np.sum(
+                grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
+
+            for i in range(min(3, grad_energy_C.shape[0])):
+                grad_energy_C[i, i:] = 0
+            calculated.append({'zmolecule': zmolecule, 'energy': energy,
+                               'gradient': grad_energy_C})
+
+            with open(output, 'a') as f:
+                f.write(_get_table_row(calculated))
+            return energy, grad_energy_C.flatten()
     return V
 
 
-def _get_zm_from_C_generator(zmolecule):
-    def get_zm_from_C(C_rad, previous_zm=[zmolecule]):
-        C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
-        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+def get_zm_from_C(C_rad, previous_zm):
+    C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+    C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
-        new_zm = previous_zm[-1].copy()
-        new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
-        previous_zm.append(new_zm)
-        return new_zm
-    return get_zm_from_C
+    new_zm = previous_zm.copy()
+    new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
+    return new_zm
+
+# def _get_zm_from_C_generator(zmolecule):
+#     def get_zm_from_C(C_rad, previous_zm):
+#         C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+#         C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+#
+#         new_zm = previous_zm.copy()
+#         new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
+#         return new_zm
+#     return get_zm_from_C
 
 
 def _create_header(zmolecule, theory, basis,
@@ -94,7 +103,7 @@ def _create_header(zmolecule, theory, basis,
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
-## Structures
+## Starting Structures
 ### Starting structure as Zmatrix
 {zmat}
 
@@ -110,25 +119,26 @@ Starting {time}:
 {table_header}
 """.format
 
-    table_header = '|{:>4}| {:^16} | {:^16} |\n'.format(
-        'n', 'energy [eV]', 'delta [eV]')
-    table_header += '|----|------------------|------------------|'
+    def _get_table_header():
+        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} |\n'.format
+        header = get_row('n', 'energy [hartree]', 'delta [hartree]')
+        header += get_row(4 * '-', 16 * '-', 16 * '-')
+        return header
 
+    def _get_calc_setup(backend, theory, charge, multiplicity):
+        data = [['Theory', theory],
+                ['Charge', charge],
+                ['Multiplicity', multiplicity]]
+        return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
     calculation_setup = _get_calc_setup(backend, theory, charge, multiplicity)
+
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
         cartesian=_get_markdown(zmolecule.get_cartesian()),
         electronic_calculation_setup=calculation_setup,
-        time=datetime.datetime.now().replace(microsecond=0).isoformat(),
-        table_header=table_header)
+        time=datetime.now().replace(microsecond=0).isoformat(),
+        table_header=_get_table_header())
     return header
-
-
-def _get_calc_setup(backend, theory, charge, multiplicity):
-    data = [['Theory', theory],
-            ['Charge', charge],
-            ['Multiplicity', multiplicity]]
-    return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
 def _get_markdown(molecule):
@@ -145,10 +155,18 @@ def _get_table_row(calculated):
         delta = energy - calculated[-2][1]
     return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
 
-# def _create_finish():
-#     get_output = """\
-# The calculation finished after
-#
-#     """
-#     return output
-#
+
+def _create_footer(time, delta_time):
+    get_output = """\
+The calculation finished successfully {time}
+and needed {delta_time}.
+
+## Optimised Structures
+### Optimised structure as Zmatrix
+{zmat}
+
+### Optimised structure in cartesian coordinates
+{cartesian}
+""".format
+    output = get_output()
+    return output
