@@ -45,7 +45,7 @@ def _create_V_function(zmolecule, output, **kwargs):
 
     def V(C_rad, calculated=[], get_calculated=False):
         if get_calculated:
-            return calculated, get_zm_from_C(get_calculated=True)
+            return calculated, get_zm_from_C(get_previous=True)
         else:
             zmolecule = get_zm_from_C(C_rad)
 
