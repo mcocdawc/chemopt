@@ -34,6 +34,7 @@ def optimise(zmolecule, symbols=None, **kwargs):
 
     for f in ['{}.molden'.format, '{}.out'.format, '{}_el_calcs'.format]:
         rename_existing(f(base_filename))
+    os.mkdir('{}_el_calcs'.format(base_filename))
 
     V = _create_V_function(zmolecule, base_filename, **kwargs)
     t1 = datetime.now()
