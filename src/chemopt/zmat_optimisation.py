@@ -27,8 +27,11 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
     V = _create_V_function(zmolecule, output, **kwargs)
+    t1 = datetime.now()
     with open(output, 'w') as f:
-        f.write(_create_header(zmolecule, **kwargs))
+        f.write(_create_header(
+            zmolecule, start_time=t1.replace(microsecond=0).isoformat(),
+            **kwargs))
     minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
     return calculated
@@ -60,7 +63,11 @@ def _create_V_function(zmolecule, output, **kwargs):
 
             for i in range(min(3, grad_energy_C.shape[0])):
                 grad_energy_C[i, i:] = 0
-            calculated.append([energy, grad_energy_C, zmolecule])
+
+            zmolecule.metadata['energy'] = energy
+            zmolecule.metadata['grad_energy'] = grad_energy_C
+            calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
+                               'zmolecule': zmolecule})
             with open(output, 'a') as f:
                 f.write(_get_table_row(calculated))
 
@@ -90,6 +97,7 @@ def _get_zm_from_C_generator(zmolecule):
 
 
 def _create_header(zmolecule, theory, basis,
+                   start_time,
                    backend=None,
                    charge=fixed_defaults['charge'],
                    title=fixed_defaults['title'],
@@ -101,16 +109,18 @@ def _create_header(zmolecule, theory, basis,
 
 ## Starting Structures
 ### Starting structure as Zmatrix
+
 {zmat}
 
 ### Starting structure in cartesian coordinates
+
 {cartesian}
 
 ## Setup for the electronic calculations
 {electronic_calculation_setup}
 
 ## Iterations
-Starting {time}:
+Starting {start_time}
 
 {table_header}
 """.format
@@ -133,7 +143,7 @@ Starting {time}:
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
         cartesian=_get_markdown(zmolecule.get_cartesian()),
         electronic_calculation_setup=calculation_setup,
-        time=datetime.now().replace(microsecond=0).isoformat(),
+        start_time=start_time,
         table_header=_get_table_header())
     return header
 
@@ -145,11 +155,11 @@ def _get_markdown(molecule):
 
 def _get_table_row(calculated):
     n = len(calculated)
-    energy = calculated[-1][0]
+    energy = calculated[-1]['energy']
     if n == 1:
         delta = 0.
     else:
-        delta = energy - calculated[-2][0]
+        delta = calculated[-1]['energy'] - calculated[-2]['energy']
     return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
 
 
