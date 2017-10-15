@@ -109,8 +109,8 @@ geometry = {{
 ---
 """.format
 
-    theory_str = _get_theory_str(theory, molecule.get_electron_number(),
-                                 multiplicity, wfn_symmetry)
+    theory_str = _get_theory_str(theory, molecule.get_electron_number(charge),
+                                 wfn_symmetry, multiplicity)
     out = get_output(title=title, basis_str=_get_basis_str(basis),
                      geometry=molecule.to_xyz(),
                      theory_str=theory_str,
@@ -138,12 +138,12 @@ def _get_basis_str(basis):
     return basis_str
 
 
-def _get_wavefn_str(num_e, multiplicity, wfn_symmetry):
+def _get_wavefn_str(num_e, wfn_symmetry, multiplicity):
     return 'wf, {}, {}, {}'.format(num_e, wfn_symmetry, multiplicity - 1)
 
 
-def _get_theory_str(theory, num_e, multiplicity, wfn_symmetry):
-    wfn = _get_wavefn_str(num_e, multiplicity, wfn_symmetry)
+def _get_theory_str(theory, num_e, wfn_symmetry, multiplicity):
+    wfn = _get_wavefn_str(num_e, wfn_symmetry, multiplicity)
     theory_str = ''
     if theory != 'B3LYP':
         theory_str += '{{rhf\n{wfn}}}'.format(wfn=wfn)

@@ -100,7 +100,7 @@ def _get_V_function(zmolecule, base_filename, **kwargs):
 
 def _get_zm_from_C_generator(zmolecule):
     def get_zm_from_C(C_rad=None, previous_zmats=[zmolecule],
-                      get_previous=False):
+                      get_previous=False):  # pylint:disable=dangerous-default-value
         if get_previous:
             return previous_zmats
         elif C_rad is not None:

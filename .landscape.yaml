@@ -3,6 +3,7 @@
 ignore-paths:
   - docs
   - src/chemopt/__init__.py
+  - src/chemopt/interface/__init__.py
 # pylint:
 #   disable:
 #     - cyclic-import
