@@ -138,7 +138,7 @@ def _get_markdown(molecule):
 
 def _get_table_row(calculated):
     n = len(calculated)
-    energy = calculated[-1][1]
+    energy = calculated[-1][0]
     if n == 1:
         delta = 0.
     else:
