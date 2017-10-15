@@ -41,7 +41,6 @@ def optimise(zmolecule, symbols=None, **kwargs):
         f.write(_create_header(
             zmolecule, start_time=get_isostring(t1),
             **kwargs))
-        f.write(header)
     minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
 
