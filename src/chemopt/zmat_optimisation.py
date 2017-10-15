@@ -65,7 +65,7 @@ def _create_V_function(zmolecule, base_filename, **kwargs):
             zmolecule = get_zm_from_C(C_rad)
 
             el_input = os.path.join('{}_el_calcs'.format(base_filename),
-                                    '{}.inp'.format(base_filename))
+                                    '{}'.format(base_filename))
             result = calculate(molecule=zmolecule, forces=True,
                                base_filename=el_input, **kwargs)
             energy = convertor(result.scfenergies[0], 'eV', 'hartree')
