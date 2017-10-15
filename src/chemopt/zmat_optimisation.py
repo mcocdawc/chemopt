@@ -28,6 +28,7 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
     print(inspect.stack()[0][1])
+    print(inspect.stack()[1][1])
     return 1
     V = _create_V_function(zmolecule, output, **kwargs)
     t1 = datetime.now()
