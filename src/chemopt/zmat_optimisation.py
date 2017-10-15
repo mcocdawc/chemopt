@@ -70,7 +70,7 @@ def _create_V_function(zmolecule, base_filename, **kwargs):
             result = calculate(molecule=zmolecule, forces=True,
                                base_filename=el_input, **kwargs)
             energy = convertor(result.scfenergies[0], 'eV', 'hartree')
-            grad_energy_X = result.grads[0]
+            grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
 
             grad_X = zmolecule.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
