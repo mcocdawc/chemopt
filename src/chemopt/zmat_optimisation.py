@@ -116,9 +116,10 @@ Starting {time}:
 """.format
 
     def _get_table_header():
-        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} |\n'.format
-        header = get_row('n', 'energy [hartree]', 'delta [hartree]')
-        header += get_row(4 * '-', 16 * '-', 16 * '-')
+        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} |'.format
+        header = (get_row('n', 'energy [hartree]', 'delta [hartree]')
+                  + '\n'
+                  + get_row(4 * '-', 16 * '-', 16 * '-'))
         return header
 
     def _get_calc_setup(backend, theory, charge, multiplicity):
