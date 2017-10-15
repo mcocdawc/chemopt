@@ -1,6 +1,10 @@
+import inspect
+import os
 from datetime import datetime
+from os.path import basename, splitext
 
 import numpy as np
+from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 
 from cclib.parser.utils import convertor
@@ -8,10 +12,9 @@ from cclib.parser.utils import convertor
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 from tabulate import tabulate
-import inspect
 
 
-def optimise(zmolecule, output, symbols=None, **kwargs):
+def optimise(zmolecule, symbols=None, **kwargs):
     """Optimize a molecule.
 
     Args:
@@ -27,17 +30,23 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
     Returns:
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
-    print(inspect.stack()[0][1])
-    print(inspect.stack()[1][1])
-    return 1
-    V = _create_V_function(zmolecule, output, **kwargs)
+    base_filename = splitext(basename(inspect.stack()[-1][1]))[0]
+
+    for f in ['{}.molden'.format, '{}.out'.format, '{}_el_calcs'.format]:
+        rename_existing(f(base_filename))
+
+    V = _create_V_function(zmolecule, base_filename, **kwargs)
     t1 = datetime.now()
-    with open(output, 'w') as f:
+    with open('{}.out'.format(base_filename), 'w') as f:
         f.write(_create_header(
-            zmolecule, start_time=t1.replace(microsecond=0).isoformat(),
+            zmolecule, start_time=get_isostring(t1),
             **kwargs))
+        f.write(header)
     minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
+
+    to_molden([x['zmolecule'].get_cartesian() for x in calculated],
+              buf='{}.molden'.format(base_filename))
     return calculated
 
 
@@ -47,7 +56,7 @@ def _extract_C_rad(zmolecule):
     return C_rad.flatten(order='F')
 
 
-def _create_V_function(zmolecule, output, **kwargs):
+def _create_V_function(zmolecule, base_filename, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
@@ -56,7 +65,10 @@ def _create_V_function(zmolecule, output, **kwargs):
         elif C_rad is not None:
             zmolecule = get_zm_from_C(C_rad)
 
-            result = calculate(molecule=zmolecule, forces=True, **kwargs)
+            el_input = os.path.join('{}_el_calcs'.format(base_filename),
+                                    '{}.inp'.format(base_filename))
+            result = calculate(molecule=zmolecule, forces=True,
+                               base_filename=el_input, **kwargs)
             energy = convertor(result.scfenergies[0], 'eV', 'hartree')
             grad_energy_X = result.grads[0]
 
@@ -72,7 +84,7 @@ def _create_V_function(zmolecule, output, **kwargs):
             zmolecule.metadata['grad_energy'] = grad_energy_C
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
                                'zmolecule': zmolecule})
-            with open(output, 'a') as f:
+            with open('{}.out'.format(base_filename), 'a') as f:
                 f.write(_get_table_row(calculated))
 
             return energy, grad_energy_C.flatten()
@@ -167,6 +179,20 @@ def _get_table_row(calculated):
     return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
 
 
+def rename_existing(filepath):
+    if os.path.exists(filepath):
+        get_path = (filepath + '_{}').format
+        found = False
+        end = 1
+        while not found:
+            if not os.path.exists(get_path(end)):
+                found = True
+            end += 1
+        for i in range(end - 1, 1, -1):
+            os.rename(get_path(i - 1), get_path(i))
+        os.rename(filepath, get_path(1))
+
+
 def _create_footer(time, delta_time):
     get_output = """\
 The calculation finished successfully {time}
@@ -181,3 +207,7 @@ and needed {delta_time}.
 """.format
     output = get_output()
     return output
+
+
+def get_isostring(time):
+    return time.replace(microsecond=0).isoformat()
