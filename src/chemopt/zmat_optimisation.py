@@ -39,7 +39,7 @@ def optimise(zmolecule, symbols=None, **kwargs):
     V = _get_V_function(zmolecule, base_filename, **kwargs)
     t1 = datetime.now()
     with open('{}.out'.format(base_filename), 'w') as f:
-        f.write(_get_header(zmolecule, start_time=_get_isostring(t1), **kwargs))
+        f.write(_get_header(zmolecule, start_time=_get_isostr(t1), **kwargs))
     minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
 
@@ -221,10 +221,10 @@ and needed: {delta_time}.
     output = get_output(zmat=_get_markdown(opt_zmat),
                         cartesian=_get_markdown(opt_zmat.get_cartesian()),
                         molden='{}.molden'.format(base_filename),
-                        end_time=_get_isostring(end_time),
+                        end_time=_get_isostr(end_time),
                         delta_time=str(end_time - start_time).split('.')[0])
     return output
 
 
-def _get_isostring(time):
+def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
