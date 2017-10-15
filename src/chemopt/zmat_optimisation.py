@@ -49,7 +49,7 @@ def _create_V_function(zmolecule, output, **kwargs):
         else:
             if calculated:
                 zmolecule = get_zm_from_C(
-                    C_rad, previous_zm=calculated[-1]{'zmolecule'})
+                    C_rad, previous_zm=calculated[-1]['zmolecule'])
             else:
                 # zmolecule from outer scope
                 pass
