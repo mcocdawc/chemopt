@@ -45,7 +45,7 @@ def _create_V_function(zmolecule, output, **kwargs):
 
     def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
-            return calculated, get_zm_from_C(get_previous=True)
+            return calculated
         elif C_rad is not None:
             zmolecule = get_zm_from_C(C_rad)
 
@@ -60,7 +60,7 @@ def _create_V_function(zmolecule, output, **kwargs):
 
             for i in range(min(3, grad_energy_C.shape[0])):
                 grad_energy_C[i, i:] = 0
-            calculated.append([energy, grad_energy_C])
+            calculated.append([energy, grad_energy_C, zmolecule])
             with open(output, 'a') as f:
                 f.write(_get_table_row(calculated))
 
@@ -79,8 +79,9 @@ def _get_zm_from_C_generator(zmolecule):
             C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
-            new_zm = previous_zmats[-1].copy()
-            new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
+            new_zm = previous_zmats.pop().copy()
+            zmat_values = ['bond', 'angle', 'dihedral']
+            new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
             previous_zmats.append(new_zm)
             return new_zm
         else:
