@@ -8,6 +8,7 @@ from cclib.parser.utils import convertor
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 from tabulate import tabulate
+import inspect
 
 
 def optimise(zmolecule, output, symbols=None, **kwargs):
@@ -26,6 +27,8 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
     Returns:
         :class:`chemcoord.Cartesian`: A new cartesian instance.
     """
+    print(inspect.stack()[0][1])
+    return 1
     V = _create_V_function(zmolecule, output, **kwargs)
     t1 = datetime.now()
     with open(output, 'w') as f:
