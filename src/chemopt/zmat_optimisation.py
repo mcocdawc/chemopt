@@ -46,7 +46,7 @@ def _create_V_function(zmolecule, output, **kwargs):
     def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
             return calculated, get_zm_from_C(get_previous=True)
-        elif C_rad is None:
+        elif C_rad is not None:
             zmolecule = get_zm_from_C(C_rad)
 
             result = calculate(molecule=zmolecule, forces=True, **kwargs)
@@ -75,7 +75,7 @@ def _get_zm_from_C_generator(zmolecule):
                       get_previous=False):
         if get_previous:
             return previous_zmats
-        elif C_rad is None:
+        elif C_rad is not None:
             C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
