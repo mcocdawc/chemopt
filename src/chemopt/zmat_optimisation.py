@@ -39,7 +39,7 @@ def optimise(zmolecule, symbols=None, **kwargs):
     V = _get_V_function(zmolecule, base_filename, **kwargs)
     t1 = datetime.now()
     with open('{}.out'.format(base_filename), 'w') as f:
-        f.write(_get_header(zmolecule, start_time=get_isostring(t1), **kwargs))
+        f.write(_get_header(zmolecule, start_time=_get_isostring(t1), **kwargs))
     minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
 
