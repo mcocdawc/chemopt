@@ -142,7 +142,7 @@ def _get_table_row(calculated):
     if n == 1:
         delta = 0.
     else:
-        delta = energy - calculated[-2][1]
+        delta = energy - calculated[-2][0]
     return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
 
 
