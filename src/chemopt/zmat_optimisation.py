@@ -30,7 +30,7 @@ def optimise(zmolecule, output, symbols=None, **kwargs):
     with open(output, 'w') as f:
         f.write(_create_header(zmolecule, **kwargs))
     minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
-    calculated = V(_extract_C_rad(zmolecule), get_calculated=True)
+    calculated = V(get_calculated=True)
     return calculated
 
 
@@ -43,10 +43,10 @@ def _extract_C_rad(zmolecule):
 def _create_V_function(zmolecule, output, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
-    def V(C_rad, calculated=[], get_calculated=False):
+    def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
             return calculated, get_zm_from_C(get_previous=True)
-        else:
+        elif C_rad is None:
             zmolecule = get_zm_from_C(C_rad)
 
             result = calculate(molecule=zmolecule, forces=True, **kwargs)
@@ -65,14 +65,17 @@ def _create_V_function(zmolecule, output, **kwargs):
                 f.write(_get_table_row(calculated))
 
             return energy, grad_energy_C.flatten()
+        else:
+            raise ValueError
     return V
 
 
 def _get_zm_from_C_generator(zmolecule):
-    def get_zm_from_C(C_rad, previous_zmats=[zmolecule], get_previous=False):
+    def get_zm_from_C(C_rad=None, previous_zmats=[zmolecule],
+                      get_previous=False):
         if get_previous:
             return previous_zmats
-        else:
+        elif C_rad is None:
             C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
@@ -80,6 +83,8 @@ def _get_zm_from_C_generator(zmolecule):
             new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
             previous_zmats.append(new_zm)
             return new_zm
+        else:
+            raise ValueError
     return get_zm_from_C
 
 
