@@ -8,7 +8,6 @@ from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 
 from cclib.parser.utils import convertor
-# from chemopt import export
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 from tabulate import tabulate
@@ -18,17 +17,18 @@ def optimise(zmolecule, symbols=None, **kwargs):
     """Optimize a molecule.
 
     Args:
-        frame (pd.DataFrame): A Dataframe with at least the
-            columns ``['atom', 'x', 'y', 'z']``.
-            Where ``'atom'`` is a string for the elementsymbol.
-        atoms (sequence): A list of strings. (Elementsymbols)
-        coords (sequence): A ``n_atoms * 3`` array containg the positions
-            of the atoms. Note that atoms and coords are mutually exclusive
-            to frame. Besides atoms and coords have to be both either None
-            or not None.
+        zmolecule (:class:`~chemcoord.Zmat`):
+        symbols (sympy expressions):
 
     Returns:
-        :class:`chemcoord.Cartesian`: A new cartesian instance.
+        list: A list of dictionaries. Each dictionary has three keys:
+        ``['energy', 'grad_energy', 'zmolecule']``.
+        The energy is given in Hartree
+        The energy gradient ('grad_energy') is given in internal coordinates.
+        The units are Hartree / Angstrom for bonds and
+        Hartree / radians for angles and dihedrals.
+        The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
+        contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
     base_filename = splitext(basename(inspect.stack()[-1][1]))[0]
 
