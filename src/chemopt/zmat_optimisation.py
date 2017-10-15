@@ -36,27 +36,32 @@ def optimise(zmolecule, symbols=None, **kwargs):
         rename_existing(f(base_filename))
     os.mkdir('{}_el_calcs'.format(base_filename))
 
-    V = _create_V_function(zmolecule, base_filename, **kwargs)
+    V = _get_V_function(zmolecule, base_filename, **kwargs)
     t1 = datetime.now()
     with open('{}.out'.format(base_filename), 'w') as f:
-        f.write(_create_header(
-            zmolecule, start_time=get_isostring(t1),
-            **kwargs))
-    minimize(V, x0=_extract_C_rad(zmolecule), jac=True, method='BFGS')
+        f.write(_get_header(zmolecule, start_time=get_isostring(t1), **kwargs))
+    minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
     calculated = V(get_calculated=True)
 
     to_molden([x['zmolecule'].get_cartesian() for x in calculated],
               buf='{}.molden'.format(base_filename))
+    t2 = datetime.now()
+
+    with open('{}.out'.format(base_filename), 'a') as f:
+        footer = _get_footer(opt_zmat=calculated[-1]['zmolecule'],
+                             start_time=t1, end_time=t2,
+                             base_filename=base_filename)
+        f.write(footer)
     return calculated
 
 
-def _extract_C_rad(zmolecule):
+def _get_C_rad(zmolecule):
     C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
     C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
     return C_rad.flatten(order='F')
 
 
-def _create_V_function(zmolecule, base_filename, **kwargs):
+def _get_V_function(zmolecule, base_filename, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
@@ -112,7 +117,7 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def _create_header(zmolecule, theory, basis,
+def _get_header(zmolecule, theory, basis,
                    start_time,
                    backend=None,
                    charge=fixed_defaults['charge'],
@@ -193,21 +198,32 @@ def rename_existing(filepath):
         os.rename(filepath, get_path(1))
 
 
-def _create_footer(time, delta_time):
+def _get_footer(opt_zmat, start_time, end_time, base_filename):
     get_output = """\
-The calculation finished successfully {time}
-and needed {delta_time}.
 
 ## Optimised Structures
 ### Optimised structure as Zmatrix
+
 {zmat}
 
+
 ### Optimised structure in cartesian coordinates
+
 {cartesian}
+
+## Closing
+
+Structures were written to {molden}.
+The calculation finished successfully at {end_time}
+and needed {delta_time}.
 """.format
-    output = get_output()
+    output = get_output(zmat=_get_markdown(opt_zmat),
+                        cartesian=_get_markdown(opt_zmat.get_cartesian()),
+                        molden='{}.molden'.format(base_filename),
+                        end_time=_get_isostring(end_time),
+                        delta_time=str(end_time - start_time).split('.')[0])
     return output
 
 
-def get_isostring(time):
+def _get_isostring(time):
     return time.replace(microsecond=0).isoformat()
