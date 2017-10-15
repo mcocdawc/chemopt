@@ -214,8 +214,9 @@ def _get_footer(opt_zmat, start_time, end_time, base_filename):
 ## Closing
 
 Structures were written to {molden}.
-The calculation finished successfully at {end_time}
-and needed {delta_time}.
+
+The calculation finished successfully at: {end_time}
+and needed: {delta_time}.
 """.format
     output = get_output(zmat=_get_markdown(opt_zmat),
                         cartesian=_get_markdown(opt_zmat.get_cartesian()),
