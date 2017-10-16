@@ -3,7 +3,7 @@ from chemopt import export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
-from . import molpro
+from chemopt.interface import molpro
 
 
 @export
