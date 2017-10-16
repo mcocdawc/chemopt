@@ -116,8 +116,9 @@ geometry = {{
 ---
 """.format
 
-    hamiltonian_str = _get_hamiltonian_str(hamiltonian, molecule.get_electron_number(charge),
-                                 wfn_symmetry, multiplicity)
+    hamiltonian_str = _get_hamiltonian_str(
+        hamiltonian, molecule.get_electron_number(charge),
+        wfn_symmetry, multiplicity)
     out = get_output(title=title, basis_str=_get_basis_str(basis),
                      geometry=molecule.to_xyz(),
                      hamiltonian_str=hamiltonian_str,
