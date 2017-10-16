@@ -119,7 +119,7 @@ geometry = {{
         hamiltonian, molecule.get_electron_number(charge),
         wfn_symmetry, multiplicity)
     out = get_output(title=title, basis_str=_get_basis_str(basis),
-                     geometry=molecule.to_xyz(),
+                     geometry=molecule.to_xyz(sort_index=False),
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
                      calculation_type=_get_calculation_type(calculation_type))

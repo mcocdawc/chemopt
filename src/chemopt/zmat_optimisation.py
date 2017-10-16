@@ -4,7 +4,7 @@ from datetime import datetime
 from os.path import basename, join, normpath, splitext
 
 import numpy as np
-from scipy.optimize import minimize
+import scipy.optimize
 
 from cclib.parser.utils import convertor
 from chemcoord.xyz_functions import to_molden
@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 
 def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
-             molden_out=None, **kwargs):
+             molden_out=None, opt_f=None, **kwargs):
     """Optimize a molecule.
 
     Args:
@@ -31,6 +31,8 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
+    if opt_f is None:
+        opt_f = scipy.optimize.minimize
     base = splitext(basename(inspect.stack()[-1][1]))[0]
     if md_out is None:
         md_out = '{}.md'.format(base)
@@ -44,11 +46,15 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
 
     t1 = datetime.now()
     if symbols is None:
+        # TODO continue here
+        while not is_converged(energies, grads_X):
+            energies, grads_X = 1, 2
+
         V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
         with open(md_out, 'w') as f:
             f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
                                 **kwargs))
-        minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+        opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
         calculated = V(get_calculated=True)
     else:
         pass
@@ -56,7 +62,6 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     to_molden(
         [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
     t2 = datetime.now()
-
     with open(md_out, 'a') as f:
         footer = _get_footer(opt_zmat=calculated[-1]['zmolecule'],
                              start_time=t1, end_time=t2,
