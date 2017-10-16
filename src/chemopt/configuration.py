@@ -14,7 +14,7 @@ values = {}
 values['basis'] = ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
                    '6-31+G(d)', '6-311G(d)', 'cc-pVDZ', 'cc-pVTZ',
                    'AUG-cc-pVDZ', 'AUG-cc-pVTZ']
-values['theory'] = ['RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)']
+values['hamiltonian'] = ['RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)']
 values['calculation_type'] = [
     'Single Point', 'Equilibrium Geometry', 'Frequencies']
 values['backend'] = {'molpro'}
@@ -123,8 +123,8 @@ def get_docstr(key, defaults):
 
 docstring = {}
 
-docstring['theory'] = "The theory to use for calculating the electronic energy. \
-The allowed values are {}.\n".format(values['theory'])
+docstring['hamiltonian'] = "The hamiltonian to use for calculating the \
+electronic energy. The allowed values are {}.\n".format(values['hamiltonian'])
 
 docstring['basis'] = "The basis set to use for calculating \
 the electronic energy. The allowed values are {}.\n".format(values['basis'])

@@ -125,7 +125,7 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def _get_header(zmolecule, theory, basis, start_time, backend=None,
+def _get_header(zmolecule, hamiltonian, basis, start_time, backend=None,
                 charge=fixed_defaults['charge'], title=fixed_defaults['title'],
                 multiplicity=fixed_defaults['multiplicity'], **kwargs):
     if backend is None:
@@ -158,12 +158,12 @@ Starting {start_time}
                   + get_row(4 * '-', 16 * '-', 16 * '-'))
         return header
 
-    def _get_calc_setup(backend, theory, charge, multiplicity):
-        data = [['Theory', theory],
+    def _get_calc_setup(backend, hamiltonian, charge, multiplicity):
+        data = [['Hamiltonian', hamiltonian],
                 ['Charge', charge],
                 ['Multiplicity', multiplicity]]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
-    calculation_setup = _get_calc_setup(backend, theory, charge, multiplicity)
+    calculation_setup = _get_calc_setup(backend, hamiltonian, charge, multiplicity)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),

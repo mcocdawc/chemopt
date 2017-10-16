@@ -9,7 +9,7 @@ from . import molpro
 
 @export
 @substitute_docstr
-def calculate(molecule, theory, basis,
+def calculate(molecule, hamiltonian, basis,
               el_calc_input=None, backend=None,
               charge=fixed_defaults['charge'],
               calculation_type=fixed_defaults['calculation_type'],
@@ -21,7 +21,7 @@ def calculate(molecule, theory, basis,
 
     Args:
         molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
-        theory (str): {theory}
+        hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         el_calc_input (str): {el_calc_input}
         backend (str): {backend}
@@ -42,7 +42,7 @@ def calculate(molecule, theory, basis,
     if backend == 'molpro':
         return molpro.calculate(
             el_calc_input=el_calc_input, molecule=molecule,
-            theory=theory, basis=basis, charge=charge,
+            hamiltonian=hamiltonian, basis=basis, charge=charge,
             calculation_type=calculation_type, forces=forces, title=title,
             multiplicity=multiplicity, **kwargs)
     else:
