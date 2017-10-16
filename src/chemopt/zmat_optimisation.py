@@ -98,7 +98,7 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
                                'zmolecule': zmolecule})
             with open(md_out, 'a') as f:
-                f.write(_get_table_row(calculated))
+                f.write(_get_table_row(calculated, grad_energy_X))
 
             return energy, grad_energy_C.flatten()
         else:
@@ -152,10 +152,11 @@ Starting {start_time}
 """.format
 
     def _get_table_header():
-        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} |'.format
-        header = (get_row('n', 'energy [hartree]', 'delta [hartree]')
+        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
+        header = (get_row('n', 'energy [Hartree]',
+                          'delta [Hartree]', 'grad_X_max [Hartree / Angstrom]')
                   + '\n'
-                  + get_row(4 * '-', 16 * '-', 16 * '-'))
+                  + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
         return header
 
     def _get_calc_setup(backend, hamiltonian, charge, multiplicity):
@@ -180,14 +181,16 @@ def _get_markdown(molecule):
     return tabulate(data, tablefmt='pipe', headers=data.columns)
 
 
-def _get_table_row(calculated):
+def _get_table_row(calculated, grad_energy_X):
     n = len(calculated)
     energy = calculated[-1]['energy']
     if n == 1:
         delta = 0.
     else:
         delta = calculated[-1]['energy'] - calculated[-2]['energy']
-    return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
+    grad_energy_X_max = abs(grad_energy_X).max()
+    get_str = '|{:>4}| {:16.10f} | {:16.10f} | {:28.10f} |\n'.format
+    return get_str(n, energy, delta, grad_energy_X_max)
 
 
 def rename_existing(filepath):
