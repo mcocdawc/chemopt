@@ -123,7 +123,7 @@ def get_docstr(key, defaults):
 
 docstring = {}
 
-docstring['theory'] = "The theory to use for calculating the electonic energy. \
+docstring['theory'] = "The theory to use for calculating the electronic energy. \
 The allowed values are {}.\n".format(values['theory'])
 
 docstring['basis'] = "The basis set to use for calculating \
@@ -140,9 +140,11 @@ The default is {}.\n".format(fixed_defaults['charge'])
 docstring['forces'] = "Specify if energy gradients should be calculated. \
 The default is {}.".format(fixed_defaults['forces'])
 
-docstring['base_filename'] = "Specify the base filename. \
-The input file be ``base_filename.inp``, \
-the output will be ``base_filename.out``.\n"
+docstring['el_calc_input'] = "Specify the input filename for \
+electronic calculations. \
+If it is None, the filename of the calling python script is used \
+(With the suffix ``.inp`` instead of ``.py``). \
+The output will be ``os.path.splitext(el_calc_input)[0] + '.out'``.\n"
 
 
 docstring['backend'] = "Specify which QM program suite shoud be used. \

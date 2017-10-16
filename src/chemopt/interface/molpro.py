@@ -1,15 +1,19 @@
 import subprocess
 from subprocess import run
+import inspect
 
 import chemcoord as cc
 
 import cclib
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
+import os
+from os.path import splitext
 
 
 @substitute_docstr
-def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
+def calculate(molecule, theory, basis, molpro_exe=None,
+              el_calc_input=None,
               charge=fixed_defaults['charge'],
               calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
@@ -19,7 +23,7 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
     """Calculate the energy of a molecule using Molpro.
 
     Args:
-        base_filename (str): {base_filename}
+        el_calc_input (str): {el_calc_input}
         molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
         theory (str): {theory}
         basis (str): {basis}
@@ -38,6 +42,8 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
+    if el_calc_input is None:
+        el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
 
     if isinstance(molecule, cc.Zmat):
         molecule = molecule.get_cartesian()
@@ -47,8 +53,9 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
 
-    input_path = base_filename + '.inp'
-    output_path = base_filename + '.out'
+    input_path = el_calc_input
+    output_path = '{}.out'.format(splitext(input_path)[0])
+    os.makedirs(os.path.dirname(input_path), exist_ok=True)
     with open(input_path, 'w') as f:
         f.write(input_str)
 

@@ -198,8 +198,9 @@ epub_exclude_files = ['search.html']
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-# intersphinx_mapping = {'https://docs.python.org/': None}
+# intersphinx_mapping =
 intersphinx_mapping = {
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'sympy': ('http://docs.sympy.org/latest/', None),
-    'chemcoord': ('http://chemcoord.readthedocs.io/en/v2.0.1/', None)}
+    'chemcoord': ('http://chemcoord.readthedocs.io/en/v2.0.1/', None),
+    'https://docs.python.org/3': None}
