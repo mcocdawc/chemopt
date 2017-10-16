@@ -163,7 +163,8 @@ Starting {start_time}
                 ['Charge', charge],
                 ['Multiplicity', multiplicity]]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
-    calculation_setup = _get_calc_setup(backend, hamiltonian, charge, multiplicity)
+    calculation_setup = _get_calc_setup(backend, hamiltonian, charge,
+                                        multiplicity)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),

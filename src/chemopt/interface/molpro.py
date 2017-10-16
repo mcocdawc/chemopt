@@ -163,7 +163,7 @@ def _get_hamiltonian_str(hamiltonian, num_e, wfn_symmetry, multiplicity):
         elif hamiltonian == 'B3LYP':
             hamiltonian_key = 'uks, b3lyp'
         else:
-            raise Exception('Unhandled hamiltonian type: {}'.format(hamiltonian))
+            raise Exception('Unhandled hamiltonian: {}'.format(hamiltonian))
         hamiltonian_str += '{{{}\n{}}}'.format(hamiltonian_key, wfn)
     return hamiltonian_str
 
