@@ -1,14 +1,13 @@
-import subprocess
-from subprocess import run
 import inspect
-
-import chemcoord as cc
+import os
+import subprocess
+from os.path import splitext
+from subprocess import run
 
 import cclib
+import chemcoord as cc
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
-import os
-from os.path import splitext
 
 
 @substitute_docstr

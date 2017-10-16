@@ -1,13 +1,13 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, splitext, join
+from os.path import basename, join, splitext
 
 import numpy as np
-from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 
 from cclib.parser.utils import convertor
+from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 from tabulate import tabulate

@@ -9,7 +9,6 @@ from warnings import warn
 
 from chemopt.utilities._decorators import Substitution
 
-
 values = {}
 values['basis'] = ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
                    '6-31+G(d)', '6-311G(d)', 'cc-pVDZ', 'cc-pVTZ',
