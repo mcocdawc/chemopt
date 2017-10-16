@@ -1,7 +1,7 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, join, splitext
+from os.path import basename, join, normpath, splitext
 
 import numpy as np
 from scipy.optimize import minimize
@@ -192,7 +192,8 @@ def _get_table_row(calculated):
 
 def rename_existing(filepath):
     if os.path.exists(filepath):
-        get_path = (filepath + '_{}').format
+        to_be_moved = normpath(filepath).split(os.path.sep)[0]
+        get_path = (to_be_moved + '_{}').format
         found = False
         end = 1
         while not found:
@@ -201,7 +202,7 @@ def rename_existing(filepath):
             end += 1
         for i in range(end - 1, 1, -1):
             os.rename(get_path(i - 1), get_path(i))
-        os.rename(filepath, get_path(1))
+        os.rename(to_be_moved, get_path(1))
 
 
 def _get_footer(opt_zmat, start_time, end_time, molden_out):
