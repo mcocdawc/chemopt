@@ -46,9 +46,9 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
 
     t1 = datetime.now()
     if symbols is None:
-        # TODO continue here
-        while not is_converged(energies, grads_X):
-            energies, grads_X = 1, 2
+        # # TODO continue here
+        # while not is_converged(energies, grads_X):
+        #     energies, grads_X = 1, 2
 
         V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
         with open(md_out, 'w') as f:
