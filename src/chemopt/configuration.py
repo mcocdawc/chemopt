@@ -34,10 +34,11 @@ def _give_default_file_path():
 
 
 def provide_defaults():
-    conf_defaults = {}
-    conf_defaults['backend'] = 'molpro'
-    conf_defaults['molpro_exe'] = 'molpro'
-    return conf_defaults
+    settings = {}
+    settings['defaults'] = {}
+    settings['defaults']['backend'] = 'molpro'
+    settings['defaults']['molpro_exe'] = 'molpro'
+    return settings
 
 
 def write_configuration_file(filepath=_give_default_file_path(),
@@ -58,7 +59,7 @@ def write_configuration_file(filepath=_give_default_file_path(),
         None:
     """
     config = configparser.ConfigParser()
-    config.read_dict(conf_defaults)
+    config.read_dict(settings)
 
     if os.path.isfile(filepath) and not overwrite:
         try:
@@ -70,7 +71,7 @@ def write_configuration_file(filepath=_give_default_file_path(),
             config.write(configfile)
 
 
-def read_configuration_file(conf_defaults, filepath=_give_default_file_path()):
+def read_configuration_file(settings, filepath=_give_default_file_path()):
     """Read the configuration file.
 
     .. note:: This function changes ``cc.defaults`` inplace and is
@@ -107,12 +108,13 @@ def read_configuration_file(conf_defaults, filepath=_give_default_file_path()):
 
     for section in config.sections():
         for k in config[section]:
-            conf_defaults[section][k] = get_correct_type(section, k, config)
-    return conf_defaults
+            settings[section][k] = get_correct_type(section, k, config)
+    return settings
 
 
-conf_defaults = provide_defaults()
-read_configuration_file(conf_defaults)
+settings = provide_defaults()
+read_configuration_file(settings)
+conf_defaults = settings['defaults']
 
 
 def get_docstr(key, defaults):
