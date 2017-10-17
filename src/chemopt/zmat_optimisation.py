@@ -1,19 +1,20 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, splitext
+from os.path import basename, join, normpath, splitext
 
 import numpy as np
-from chemcoord.xyz_functions import to_molden
-from scipy.optimize import minimize
+import scipy.optimize
 
 from cclib.parser.utils import convertor
+from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
 from tabulate import tabulate
 
 
-def optimise(zmolecule, symbols=None, **kwargs):
+def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
+             molden_out=None, opt_f=None, **kwargs):
     """Optimize a molecule.
 
     Args:
@@ -30,31 +31,41 @@ def optimise(zmolecule, symbols=None, **kwargs):
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    base_filename = splitext(basename(inspect.stack()[-1][1]))[0]
-
-    for f in ['{}.molden'.format, '{}.out'.format, '{}_el_calcs'.format]:
-        rename_existing(f(base_filename))
-    os.mkdir('{}_el_calcs'.format(base_filename))
+    if opt_f is None:
+        opt_f = scipy.optimize.minimize
+    base = splitext(basename(inspect.stack()[-1][1]))[0]
+    if md_out is None:
+        md_out = '{}.md'.format(base)
+    if molden_out is None:
+        molden_out = '{}.molden'.format(base)
+    if el_calc_input is None:
+        el_calc_input = join('{}_el_calcs'.format(base),
+                             '{}.inp'.format(base))
+    for filepath in [md_out, molden_out, el_calc_input]:
+        rename_existing(filepath)
 
     t1 = datetime.now()
     if symbols is None:
-        V = _get_V_function(zmolecule, base_filename, **kwargs)
-        with open('{}.out'.format(base_filename), 'w') as f:
+        # TODO continue here
+        while not is_converged(energies, grads_X):
+            energies, grads_X = 1, 2
+
+        V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
+        with open(md_out, 'w') as f:
             f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
                                 **kwargs))
-        minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+        opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
         calculated = V(get_calculated=True)
     else:
         pass
 
-    to_molden([x['zmolecule'].get_cartesian() for x in calculated],
-              buf='{}.molden'.format(base_filename))
+    to_molden(
+        [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
     t2 = datetime.now()
-
-    with open('{}.out'.format(base_filename), 'a') as f:
+    with open(md_out, 'a') as f:
         footer = _get_footer(opt_zmat=calculated[-1]['zmolecule'],
                              start_time=t1, end_time=t2,
-                             base_filename=base_filename)
+                             molden_out=molden_out)
         f.write(footer)
     return calculated
 
@@ -65,7 +76,7 @@ def _get_C_rad(zmolecule):
     return C_rad.flatten(order='F')
 
 
-def _get_V_function(zmolecule, base_filename, **kwargs):
+def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
@@ -74,10 +85,8 @@ def _get_V_function(zmolecule, base_filename, **kwargs):
         elif C_rad is not None:
             zmolecule = get_zm_from_C(C_rad)
 
-            el_input = os.path.join('{}_el_calcs'.format(base_filename),
-                                    '{}'.format(base_filename))
             result = calculate(molecule=zmolecule, forces=True,
-                               base_filename=el_input, **kwargs)
+                               el_calc_input=el_calc_input, **kwargs)
             energy = convertor(result.scfenergies[0], 'eV', 'hartree')
             grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
 
@@ -93,8 +102,8 @@ def _get_V_function(zmolecule, base_filename, **kwargs):
             zmolecule.metadata['grad_energy'] = grad_energy_C
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
                                'zmolecule': zmolecule})
-            with open('{}.out'.format(base_filename), 'a') as f:
-                f.write(_get_table_row(calculated))
+            with open(md_out, 'a') as f:
+                f.write(_get_table_row(calculated, grad_energy_X))
 
             return energy, grad_energy_C.flatten()
         else:
@@ -121,12 +130,9 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def _get_header(zmolecule, theory, basis,
-                   start_time,
-                   backend=None,
-                   charge=fixed_defaults['charge'],
-                   title=fixed_defaults['title'],
-                   multiplicity=fixed_defaults['multiplicity'], **kwargs):
+def _get_header(zmolecule, hamiltonian, basis, start_time, backend=None,
+                charge=fixed_defaults['charge'], title=fixed_defaults['title'],
+                multiplicity=fixed_defaults['multiplicity'], **kwargs):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
@@ -151,18 +157,20 @@ Starting {start_time}
 """.format
 
     def _get_table_header():
-        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} |'.format
-        header = (get_row('n', 'energy [hartree]', 'delta [hartree]')
+        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
+        header = (get_row('n', 'energy [Hartree]',
+                          'delta [Hartree]', 'grad_X_max [Hartree / Angstrom]')
                   + '\n'
-                  + get_row(4 * '-', 16 * '-', 16 * '-'))
+                  + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
         return header
 
-    def _get_calc_setup(backend, theory, charge, multiplicity):
-        data = [['Theory', theory],
+    def _get_calc_setup(backend, hamiltonian, charge, multiplicity):
+        data = [['Hamiltonian', hamiltonian],
                 ['Charge', charge],
                 ['Multiplicity', multiplicity]]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
-    calculation_setup = _get_calc_setup(backend, theory, charge, multiplicity)
+    calculation_setup = _get_calc_setup(backend, hamiltonian, charge,
+                                        multiplicity)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
@@ -178,19 +186,22 @@ def _get_markdown(molecule):
     return tabulate(data, tablefmt='pipe', headers=data.columns)
 
 
-def _get_table_row(calculated):
+def _get_table_row(calculated, grad_energy_X):
     n = len(calculated)
     energy = calculated[-1]['energy']
     if n == 1:
         delta = 0.
     else:
         delta = calculated[-1]['energy'] - calculated[-2]['energy']
-    return '|{:>4}| {:16.10f} | {:16.10f} |\n'.format(n, energy, delta)
+    grad_energy_X_max = abs(grad_energy_X).max()
+    get_str = '|{:>4}| {:16.10f} | {:16.10f} | {:28.10f} |\n'.format
+    return get_str(n, energy, delta, grad_energy_X_max)
 
 
 def rename_existing(filepath):
     if os.path.exists(filepath):
-        get_path = (filepath + '_{}').format
+        to_be_moved = normpath(filepath).split(os.path.sep)[0]
+        get_path = (to_be_moved + '_{}').format
         found = False
         end = 1
         while not found:
@@ -199,10 +210,10 @@ def rename_existing(filepath):
             end += 1
         for i in range(end - 1, 1, -1):
             os.rename(get_path(i - 1), get_path(i))
-        os.rename(filepath, get_path(1))
+        os.rename(to_be_moved, get_path(1))
 
 
-def _get_footer(opt_zmat, start_time, end_time, base_filename):
+def _get_footer(opt_zmat, start_time, end_time, molden_out):
     get_output = """\
 
 ## Optimised Structures
@@ -224,7 +235,7 @@ and needed: {delta_time}.
 """.format
     output = get_output(zmat=_get_markdown(opt_zmat),
                         cartesian=_get_markdown(opt_zmat.get_cartesian()),
-                        molden='{}.molden'.format(base_filename),
+                        molden=molden_out,
                         end_time=_get_isostr(end_time),
                         delta_time=str(end_time - start_time).split('.')[0])
     return output

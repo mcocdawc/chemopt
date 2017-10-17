@@ -1,15 +1,18 @@
+import inspect
+import os
 import subprocess
+from os.path import splitext
 from subprocess import run
 
-import chemcoord as cc
-
 import cclib
+import chemcoord as cc
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
 
 @substitute_docstr
-def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
+def calculate(molecule, hamiltonian, basis, molpro_exe=None,
+              el_calc_input=None,
               charge=fixed_defaults['charge'],
               calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
@@ -19,9 +22,9 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
     """Calculate the energy of a molecule using Molpro.
 
     Args:
-        base_filename (str): {base_filename}
-        molecule (chemcoord.Cartesian or chemcoord.Zmat):
-        theory (str): {theory}
+        el_calc_input (str): {el_calc_input}
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
         charge (int): {charge}
@@ -38,17 +41,20 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
+    if el_calc_input is None:
+        el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
 
     if isinstance(molecule, cc.Zmat):
         molecule = molecule.get_cartesian()
     input_str = generate_input_file(
-        molecule=molecule, theory=theory, basis=basis, charge=charge,
+        molecule=molecule, hamiltonian=hamiltonian, basis=basis, charge=charge,
         calculation_type=calculation_type, forces=forces,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
 
-    input_path = base_filename + '.inp'
-    output_path = base_filename + '.out'
+    input_path = el_calc_input
+    output_path = '{}.out'.format(splitext(input_path)[0])
+    os.makedirs(os.path.dirname(input_path), exist_ok=True)
     with open(input_path, 'w') as f:
         f.write(input_str)
 
@@ -71,14 +77,14 @@ def parse_output(output_path):
 
 
 @substitute_docstr
-def generate_input_file(molecule, theory, basis, charge=0,
+def generate_input_file(molecule, hamiltonian, basis, charge=0,
                         calculation_type='Single Point', forces=False,
                         title='', multiplicity=1, wfn_symmetry=1):
     """Generate a molpro input file.
 
     Args:
-        molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
-        theory (str): {theory}
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         charge (int): {charge}
         calculation_type (str): {calculation_type}
@@ -103,17 +109,18 @@ geometry = {{
 {geometry}
 }}
 
-{theory_str}
+{hamiltonian_str}
 {forces}
 {calculation_type}
 ---
 """.format
 
-    theory_str = _get_theory_str(theory, molecule.get_electron_number(charge),
-                                 wfn_symmetry, multiplicity)
+    hamiltonian_str = _get_hamiltonian_str(
+        hamiltonian, molecule.get_electron_number(charge),
+        wfn_symmetry, multiplicity)
     out = get_output(title=title, basis_str=_get_basis_str(basis),
-                     geometry=molecule.to_xyz(),
-                     theory_str=theory_str,
+                     geometry=molecule.to_xyz(sort_index=False),
+                     hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
                      calculation_type=_get_calculation_type(calculation_type))
     return out
@@ -142,22 +149,22 @@ def _get_wavefn_str(num_e, wfn_symmetry, multiplicity):
     return 'wf, {}, {}, {}'.format(num_e, wfn_symmetry, multiplicity - 1)
 
 
-def _get_theory_str(theory, num_e, wfn_symmetry, multiplicity):
+def _get_hamiltonian_str(hamiltonian, num_e, wfn_symmetry, multiplicity):
     wfn = _get_wavefn_str(num_e, wfn_symmetry, multiplicity)
-    theory_str = ''
-    if theory != 'B3LYP':
-        theory_str += '{{rhf\n{wfn}}}'.format(wfn=wfn)
+    hamiltonian_str = ''
+    if hamiltonian != 'B3LYP':
+        hamiltonian_str += '{{rhf\n{wfn}}}'.format(wfn=wfn)
     # Intentionally not using elif here:
-    if theory != 'RHF':
-        theory_key = ''
-        if theory in ['MP2', 'CCSD', 'CCSD(T)']:
-            theory_key = theory.lower()
-        elif theory == 'B3LYP':
-            theory_key = 'uks, b3lyp'
+    if hamiltonian != 'RHF':
+        hamiltonian_key = ''
+        if hamiltonian in ['MP2', 'CCSD', 'CCSD(T)']:
+            hamiltonian_key = hamiltonian.lower()
+        elif hamiltonian == 'B3LYP':
+            hamiltonian_key = 'uks, b3lyp'
         else:
-            raise Exception('Unhandled theory type: {}'.format(theory))
-        theory_str += '{{{}\n{}}}'.format(theory_key, wfn)
-    return theory_str
+            raise Exception('Unhandled hamiltonian: {}'.format(hamiltonian))
+        hamiltonian_str += '{{{}\n{}}}'.format(hamiltonian_key, wfn)
+    return hamiltonian_str
 
 
 def _get_calculation_type(calculation_type):

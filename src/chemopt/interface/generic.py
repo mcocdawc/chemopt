@@ -1,16 +1,15 @@
 import chemcoord as cc
-
 from chemopt import export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
-from . import molpro
+from chemopt.interface import molpro
 
 
 @export
 @substitute_docstr
-def calculate(molecule, theory, basis,
-              base_filename, backend=None,
+def calculate(molecule, hamiltonian, basis,
+              el_calc_input=None, backend=None,
               charge=fixed_defaults['charge'],
               calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
@@ -20,10 +19,10 @@ def calculate(molecule, theory, basis,
     """Calculate the energy of a molecule.
 
     Args:
-        molecule (chemcoord.Cartesian or chemcoord.Zmat):
-        theory (str): {theory}
+        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        hamiltonian (str): {hamiltonian}
         basis (str): {basis}
-        base_filename (str): {base_filename}
+        el_calc_input (str): {el_calc_input}
         backend (str): {backend}
         charge (int): {charge}
         calculation_type (str): {calculation_type}
@@ -41,8 +40,8 @@ def calculate(molecule, theory, basis,
         molecule = molecule.get_cartesian()
     if backend == 'molpro':
         return molpro.calculate(
-            base_filename=base_filename, molecule=molecule,
-            theory=theory, basis=basis, charge=charge,
+            el_calc_input=el_calc_input, molecule=molecule,
+            hamiltonian=hamiltonian, basis=basis, charge=charge,
             calculation_type=calculation_type, forces=forces, title=title,
             multiplicity=multiplicity, **kwargs)
     else:
