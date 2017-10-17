@@ -54,14 +54,19 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     grad_energy_X = None
     new_zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
+    n = 1
     while not is_converged(energies, grad_energy_X):
         new_zm = get_new_zm(new_zm, gradients_energy_C)
         energy, grad_energy_X, grad_energy_C = V(new_zm)
         new_zm.metadata['energy'] = energy
         structures.append(new_zm)
         energies.append(energy)
-        gradients_energy_C.popleft()
         gradients_energy_C.append(grad_energy_C.flatten())
+        if len(gradients_energy_C) == 3:
+            gradients_energy_C.popleft()
+        with open(md_out, 'a') as f:
+            f.write(_get_table_row(n, energies, grad_energy_X))
+        n += 1
 
     to_molden([zm.get_cartesian() for zm in structures], buf=molden_out)
     t2 = datetime.now()
@@ -101,11 +106,14 @@ def _get_new_zm_f_generator(zmolecule):
         new_zm = previous_zmat.copy()
         if len(gradients_energy_C) == 1:
             # @Thorsten here I need to introduce damping
-            p = -gradients_energy_C[0] / np.linalg.norm(gradients_energy_C[0])
             damping = 0.3
-            p *= damping
+            p = - damping * gradients_energy_C[0]
         else:
-            p = get_next_step(gradients_energy_C)
+            # p = get_next_step(gradients_energy_C)
+
+            # @Thorsten this works but is horribly slow
+            damping = 0.3
+            p = - damping * gradients_energy_C[1]
 
         C_deg = p.reshape((3, len(p) // 3), order='F').T
         C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
@@ -170,13 +178,12 @@ def _get_markdown(molecule):
     return tabulate(data, tablefmt='pipe', headers=data.columns)
 
 
-def _get_table_row(calculated, grad_energy_X):
-    n = len(calculated)
-    energy = calculated[-1]['energy']
+def _get_table_row(n, energies, grad_energy_X):
+    energy = energies[-1]
     if n == 1:
         delta = 0.
     else:
-        delta = calculated[-1]['energy'] - calculated[-2]['energy']
+        delta = energies[-1] - energies[-2]
     grad_energy_X_max = abs(grad_energy_X).max()
     get_str = '|{:>4}| {:16.10f} | {:16.10f} | {:28.10f} |\n'.format
     return get_str(n, energy, delta, grad_energy_X_max)
