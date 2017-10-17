@@ -19,7 +19,8 @@ def calculate(molecule, hamiltonian, basis,
     """Calculate the energy of a molecule.
 
     Args:
-        molecule (chemcoord.Cartesian or chemcoord.Zmat):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
+            If it is a string, it has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         el_calc_input (str): {el_calc_input}
@@ -36,8 +37,6 @@ def calculate(molecule, hamiltonian, basis,
     """
     if backend is None:
         backend = conf_defaults['backend']
-    if isinstance(molecule, cc.Zmat):
-        molecule = molecule.get_cartesian()
     if backend == 'molpro':
         return molpro.calculate(
             el_calc_input=el_calc_input, molecule=molecule,

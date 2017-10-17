@@ -23,7 +23,8 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
 
     Args:
         el_calc_input (str): {el_calc_input}
-        molecule (chemcoord.Cartesian or chemcoord.Zmat):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
+            If it is a string, it has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
@@ -44,10 +45,15 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     if el_calc_input is None:
         el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
 
-    if isinstance(molecule, cc.Zmat):
-        molecule = molecule.get_cartesian()
+    if isinstance(molecule, cc.Cartesian):
+        geometry = molecule.to_xyz(sort_index=False)
+    elif isinstance(molecule, cc.Zmat):
+        geometry = molecule.get_cartesian().to_xyz(sort_index=False)
+    else:
+        geometry = molecule
+
     input_str = generate_input_file(
-        molecule=molecule, hamiltonian=hamiltonian, basis=basis, charge=charge,
+        molecule=geometry, hamiltonian=hamiltonian, basis=basis, charge=charge,
         calculation_type=calculation_type, forces=forces,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
@@ -83,7 +89,7 @@ def generate_input_file(molecule, hamiltonian, basis, charge=0,
     """Generate a molpro input file.
 
     Args:
-        molecule (chemcoord.Cartesian or chemcoord.Zmat):
+        molecule (str): Has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         charge (int): {charge}
@@ -118,8 +124,9 @@ geometry = {{
     hamiltonian_str = _get_hamiltonian_str(
         hamiltonian, molecule.get_electron_number(charge),
         wfn_symmetry, multiplicity)
+
     out = get_output(title=title, basis_str=_get_basis_str(basis),
-                     geometry=molecule.to_xyz(sort_index=False),
+                     geometry=molecule,
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
                      calculation_type=_get_calculation_type(calculation_type))
