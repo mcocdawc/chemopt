@@ -248,7 +248,7 @@ def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
 
 
-def is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
+def is_converged(energies, grad_energy_X, etol=1e-7, gtol=1e-5):
     """Returns if an optimization is converged.
 
     Args:
