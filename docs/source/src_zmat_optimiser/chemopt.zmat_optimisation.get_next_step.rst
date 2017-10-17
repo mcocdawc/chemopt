@@ -1,4 +1,4 @@
-chemopt.zmat_optimisation.get_next_step
+get_next_step
 =======================================
 
 .. currentmodule:: chemopt.zmat_optimisation

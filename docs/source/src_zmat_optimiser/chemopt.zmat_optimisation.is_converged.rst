@@ -1,4 +1,4 @@
-chemopt.zmat_optimisation.is_converged
+is_converged
 ======================================
 
 .. currentmodule:: chemopt.zmat_optimisation
