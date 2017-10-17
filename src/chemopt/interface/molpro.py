@@ -85,7 +85,8 @@ def generate_input_file(molecule, hamiltonian, basis, charge=0,
     """Generate a molpro input file.
 
     Args:
-        molecule (str): Has to be a valid xyz-file.
+        molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
+            If it is a string, it has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         charge (int): {charge}
