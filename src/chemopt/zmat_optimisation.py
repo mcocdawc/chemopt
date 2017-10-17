@@ -271,7 +271,7 @@ def is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
 
 
 def get_next_step(last_two_C, gradients_energy_C, hess_old):
-    r"""Returns the next step in the BFGS algorithm.
+    r"""Returns the next step and approximated hessian in the BFGS algorithm.
 
     Args:
         last_two_C (list): A two list of the current and previous zmat values.
@@ -328,7 +328,9 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
 
 
     Returns:
-        numpy.ndarray: An float array with the same shape as the last_two_C.
+        numpy.ndarray, numpy.ndarray:
+        First float array is the next step,
+        the second float array is the new approximated hessian.
     """
     # @Thorsten I assert this!
     if len(gradients_energy_C) != 2:
