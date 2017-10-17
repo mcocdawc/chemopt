@@ -17,7 +17,7 @@ def optimise(zmolecule, symbols=None, **kwargs):
     """Optimize a molecule.
 
     Args:
-        zmolecule (:class:`~chemcoord.Zmat`):
+        zmolecule (chemcoord.Zmat):
         symbols (sympy expressions):
 
     Returns:

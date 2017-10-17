@@ -20,7 +20,7 @@ def calculate(base_filename, molecule, theory, basis, molpro_exe=None,
 
     Args:
         base_filename (str): {base_filename}
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat):
         theory (str): {theory}
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
@@ -77,7 +77,7 @@ def generate_input_file(molecule, theory, basis, charge=0,
     """Generate a molpro input file.
 
     Args:
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
         theory (str): {theory}
         basis (str): {basis}
         charge (int): {charge}

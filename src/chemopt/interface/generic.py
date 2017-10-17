@@ -20,7 +20,7 @@ def calculate(molecule, theory, basis,
     """Calculate the energy of a molecule.
 
     Args:
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat):
         theory (str): {theory}
         basis (str): {basis}
         base_filename (str): {base_filename}
