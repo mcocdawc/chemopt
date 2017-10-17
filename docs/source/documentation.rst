@@ -13,6 +13,7 @@ In non-redundant internal coordinates (Zmatrix)
     :toctree: src_zmat_optimiser
 
     optimise
+    get_next_step
 
 
 Interfaces for electronic structure calculation

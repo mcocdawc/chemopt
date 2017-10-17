@@ -32,7 +32,6 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    cols = ['bond', 'angle', 'dihedral']
     if opt_f is None:
         opt_f = scipy.optimize.minimize
     base = splitext(basename(inspect.stack()[-1][1]))[0]
@@ -51,16 +50,16 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     with open(md_out, 'w') as f:
         f.write(_get_header(zmolecule, start_time=_get_isostr(t1), **kwargs))
 
-    calculated, grads_energy_C = [], deque([])
+    energies, structures, grads_energy_C = [], [], deque([])
     grad_energy_X = None
     new_zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
-    while not is_converged(energies, grad_energy_X):
-        p = get_next_step(grads_energy_C)
-        new_zm = get_new_zm(p, new_zm)
+    while not _is_converged(energies, grad_energy_X):
+        new_zm = get_new_zm(grads_energy_C)
         energy, grad_energy_X, grad_energy_C = V(new_zm)
         new_zm.metadata['energy'] = energy
-        calculate.append({'energy': energy, 'zmolecule': new_zm})
+        structures.append(new_zm)
+        energies.append(energy)
         grads_energy_C.popleft()
         grads_energy_C.append(grad_energy_C)
 
@@ -221,9 +220,70 @@ def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
 
 
-def is_converged(energies, grad_energy_X):
-    pass
+def _is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
+    """Returns if an optimization is converged.
+
+    Args:
+        energies (list): List of energies in hartree.
+        grad_energy_X (numpy.ndarray): Gradient in cartesian coordinates
+            hartree / Angstrom.
+        etol (float): Tolerance for the energy.
+        gtol (float): Tolerance for the maximum norm of the gradient.
+
+    Returns:
+        bool:
+    """
+    if len(energies) == 0:
+        return False
+    elif len(energies) == 1:
+        return False
+    else:
+        return (abs(energies[-1] - energies[-2]) < etol and
+                abs(grad_energy_X).max() < gtol)
 
 
 def get_next_step(grads_energy_C):
-    pass
+    r"""Returns the next step in the BFGS algorithm.
+
+    Args:
+        grads_energy_C (collections.deque): A two element deque, that contains
+            the current and previous gradient in internal coordinates.
+            The order is: ``[previous, current]``.
+            Each gradient is flatted out in the following order
+
+            .. math::
+
+                \left[
+                    \frac{\partial V}{\partial r_1},
+                    \frac{\partial V}{\partial \alpha_1},
+                    \frac{\partial V}{\partial \delta_1},
+                    \frac{\partial V}{\partial r_2},
+                    \frac{\partial V}{\partial \alpha_2},
+                    \frac{\partial V}{\partial \delta_2},
+                    ...
+                \right]
+
+            Here :math:`V` is the energy and :math:`r_i, \alpha_i, \delta_i`
+            are the bond, angle, and dihedral of the :math:`i`-th atom.
+            The units are:
+
+            .. math::
+
+                    &\frac{\partial V}{\partial r_i}
+                    &\frac{\text{Hartree}}{\text{Angstrom}}
+                \\
+                    &\frac{\partial V}{\partial \alpha_i}
+                    &\frac{\text{Hartree}}{\text{Radian}}
+                \\
+                    &\frac{\partial V}{\partial \delta_i}
+                    &\frac{\text{Hartree}}{\text{Radian}}
+
+
+    Returns:
+        chemcoord.Zmat:
+    """
+    # @Thorsten I assert this!
+    if len(grads_energy_C) != 2:
+        raise ValueError('Only deques of length 2 allowed')
+
+    return next_step
