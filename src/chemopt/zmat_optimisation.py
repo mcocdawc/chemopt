@@ -2,6 +2,7 @@ import inspect
 import os
 from datetime import datetime
 from os.path import basename, join, normpath, splitext
+from collections import deque
 
 import numpy as np
 import scipy.optimize
@@ -31,6 +32,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
+    cols = ['bond', 'angle', 'dihedral']
     if opt_f is None:
         opt_f = scipy.optimize.minimize
     base = splitext(basename(inspect.stack()[-1][1]))[0]
@@ -45,89 +47,63 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         rename_existing(filepath)
 
     t1 = datetime.now()
-    if symbols is None:
-        # # TODO continue here
-        # while not is_converged(energies, grads_X):
-        #     energies, grads_X = 1, 2
+    V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
+    with open(md_out, 'w') as f:
+        f.write(_get_header(zmolecule, start_time=_get_isostr(t1), **kwargs))
 
-        V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
-        with open(md_out, 'w') as f:
-            f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
-                                **kwargs))
-        opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
-        calculated = V(get_calculated=True)
-    else:
-        pass
+    calculated, grads_energy_C = [], deque([])
+    grad_energy_X = None
+    new_zm = zmolecule.copy()
+    get_new_zm = _get_new_zm_f_generator(zmolecule)
+    while not is_converged(energies, grad_energy_X):
+        p = get_next_step(grads_energy_C)
+        new_zm = get_new_zm(p, new_zm)
+        energy, grad_energy_X, grad_energy_C = V(new_zm)
+        new_zm.metadata['energy'] = energy
+        calculate.append({'energy': energy, 'zmolecule': new_zm})
+        grads_energy_C.popleft()
+        grads_energy_C.append(grad_energy_C)
 
-    to_molden(
-        [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
+    to_molden([x['zmolecule'].get_cartesian() for x in calculated],
+              buf=molden_out)
     t2 = datetime.now()
     with open(md_out, 'a') as f:
-        footer = _get_footer(opt_zmat=calculated[-1]['zmolecule'],
+        footer = _get_footer(opt_zmat=structures[-1],
                              start_time=t1, end_time=t2,
                              molden_out=molden_out)
         f.write(footer)
     return calculated
 
 
-def _get_C_rad(zmolecule):
-    C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
-    C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
-    return C_rad.flatten(order='F')
-
-
 def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
-    get_zm_from_C = _get_zm_from_C_generator(zmolecule)
+    def V(zmolecule):
+        result = calculate(molecule=zmolecule, forces=True,
+                           el_calc_input=el_calc_input, **kwargs)
+        energy = convertor(result.scfenergies[0], 'eV', 'hartree')
+        grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
 
-    def V(C_rad=None, calculated=[], get_calculated=False):
-        if get_calculated:
-            return calculated
-        elif C_rad is not None:
-            zmolecule = get_zm_from_C(C_rad)
+        grad_X = zmolecule.get_grad_cartesian(
+            as_function=False, drop_auto_dummies=True)
+        grad_energy_C = np.sum(
+            grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
 
-            result = calculate(molecule=zmolecule, forces=True,
-                               el_calc_input=el_calc_input, **kwargs)
-            energy = convertor(result.scfenergies[0], 'eV', 'hartree')
-            grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
+        for i in range(min(3, grad_energy_C.shape[0])):
+            grad_energy_C[i, i:] = 0.
 
-            grad_X = zmolecule.get_grad_cartesian(
-                as_function=False, drop_auto_dummies=True)
-            grad_energy_C = np.sum(
-                grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
-
-            for i in range(min(3, grad_energy_C.shape[0])):
-                grad_energy_C[i, i:] = 0
-
-            zmolecule.metadata['energy'] = energy
-            zmolecule.metadata['grad_energy'] = grad_energy_C
-            calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
-                               'zmolecule': zmolecule})
-            with open(md_out, 'a') as f:
-                f.write(_get_table_row(calculated, grad_energy_X))
-
-            return energy, grad_energy_C.flatten()
-        else:
-            raise ValueError
+        return energy, grad_energy_X, grad_energy_C
     return V
 
 
-def _get_zm_from_C_generator(zmolecule):
-    def get_zm_from_C(C_rad=None, previous_zmats=[zmolecule],
-                      get_previous=False):  # pylint:disable=dangerous-default-value
-        if get_previous:
-            return previous_zmats
-        elif C_rad is not None:
-            C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
-            C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+def _get_new_zm_f_generator(zmolecule):
+    def get_new_zm(p, previous_zmat):
+        C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
-            new_zm = previous_zmats.pop().copy()
-            zmat_values = ['bond', 'angle', 'dihedral']
-            new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
-            previous_zmats.append(new_zm)
-            return new_zm
-        else:
-            raise ValueError
-    return get_zm_from_C
+        new_zm = previous_zmat.copy()
+        zmat_values = ['bond', 'angle', 'dihedral']
+        new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
+        return new_zm
+    return get_new_zm
 
 
 def _get_header(zmolecule, hamiltonian, basis, start_time, backend=None,
@@ -243,3 +219,11 @@ and needed: {delta_time}.
 
 def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
+
+
+def is_converged(energies, grad_energy_X):
+    pass
+
+
+def get_next_step(grads_energy_C):
+    pass
