@@ -19,7 +19,7 @@ def calculate(molecule, hamiltonian, basis,
     """Calculate the energy of a molecule.
 
     Args:
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat):
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         el_calc_input (str): {el_calc_input}

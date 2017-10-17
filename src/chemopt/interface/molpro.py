@@ -23,7 +23,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
 
     Args:
         el_calc_input (str): {el_calc_input}
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat):
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
@@ -83,7 +83,7 @@ def generate_input_file(molecule, hamiltonian, basis, charge=0,
     """Generate a molpro input file.
 
     Args:
-        molecule (:class:`~chemcoord.Cartesian` or :class:`~chemcoord.Zmat`):
+        molecule (chemcoord.Cartesian or chemcoord.Zmat):
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         charge (int): {charge}
