@@ -61,7 +61,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         structures.append(new_zm)
         energies.append(energy)
         gradients_energy_C.popleft()
-        gradients_energy_C.append(grad_energy_C)
+        gradients_energy_C.append(grad_energy_C.flatten())
 
     to_molden([zm.get_cartesian() for zm in structures], buf=molden_out)
     t2 = datetime.now()
