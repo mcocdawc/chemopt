@@ -54,7 +54,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     grad_energy_X = None
     new_zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
-    while not _is_converged(energies, grad_energy_X):
+    while not is_converged(energies, grad_energy_X):
         new_zm = get_new_zm(grads_energy_C)
         energy, grad_energy_X, grad_energy_C = V(new_zm)
         new_zm.metadata['energy'] = energy
@@ -220,13 +220,13 @@ def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
 
 
-def _is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
+def is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
     """Returns if an optimization is converged.
 
     Args:
         energies (list): List of energies in hartree.
         grad_energy_X (numpy.ndarray): Gradient in cartesian coordinates
-            hartree / Angstrom.
+            in Hartree / Angstrom.
         etol (float): Tolerance for the energy.
         gtol (float): Tolerance for the maximum norm of the gradient.
 
@@ -280,10 +280,11 @@ def get_next_step(grads_energy_C):
 
 
     Returns:
-        chemcoord.Zmat:
+        numpy.ndarray: An float array with the same shape as the gradients.
     """
     # @Thorsten I assert this!
     if len(grads_energy_C) != 2:
         raise ValueError('Only deques of length 2 allowed')
+    next_step = np.empty_like(grads_energy_C[0])
 
     return next_step

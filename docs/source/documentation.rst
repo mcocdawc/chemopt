@@ -13,6 +13,7 @@ In non-redundant internal coordinates (Zmatrix)
     :toctree: src_zmat_optimiser
 
     optimise
+    is_converged
     get_next_step
 
 
