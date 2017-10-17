@@ -1,8 +1,8 @@
 import inspect
 import os
+from collections import deque
 from datetime import datetime
 from os.path import basename, join, normpath, splitext
-from collections import deque
 
 import numpy as np
 import scipy.optimize
@@ -50,28 +50,27 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     with open(md_out, 'w') as f:
         f.write(_get_header(zmolecule, start_time=_get_isostr(t1), **kwargs))
 
-    energies, structures, grads_energy_C = [], [], deque([])
+    energies, structures, gradients_energy_C = [], [], deque([])
     grad_energy_X = None
     new_zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
     while not is_converged(energies, grad_energy_X):
-        new_zm = get_new_zm(grads_energy_C)
+        new_zm = get_new_zm(new_zm, gradients_energy_C)
         energy, grad_energy_X, grad_energy_C = V(new_zm)
         new_zm.metadata['energy'] = energy
         structures.append(new_zm)
         energies.append(energy)
-        grads_energy_C.popleft()
-        grads_energy_C.append(grad_energy_C)
+        gradients_energy_C.popleft()
+        gradients_energy_C.append(grad_energy_C)
 
-    to_molden([x['zmolecule'].get_cartesian() for x in calculated],
-              buf=molden_out)
+    to_molden([zm.get_cartesian() for zm in structures], buf=molden_out)
     t2 = datetime.now()
     with open(md_out, 'a') as f:
         footer = _get_footer(opt_zmat=structures[-1],
                              start_time=t1, end_time=t2,
                              molden_out=molden_out)
         f.write(footer)
-    return calculated
+    return structures, energies
 
 
 def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
@@ -94,13 +93,23 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
 
 
 def _get_new_zm_f_generator(zmolecule):
-    def get_new_zm(p, previous_zmat):
-        C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
-        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+    def get_new_zm(previous_zmat, gradients_energy_C):
+        zmat_values = ['bond', 'angle', 'dihedral']
+        if len(gradients_energy_C) == 0:
+            return previous_zmat
 
         new_zm = previous_zmat.copy()
-        zmat_values = ['bond', 'angle', 'dihedral']
-        new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
+        if len(gradients_energy_C) == 1:
+            # @Thorsten here I need to introduce damping
+            p = -gradients_energy_C[0] / np.linalg.norm(gradients_energy_C[0])
+            damping = 0.3
+            p *= damping
+        else:
+            p = get_next_step(gradients_energy_C)
+
+        C_deg = p.reshape((3, len(p) // 3), order='F').T
+        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+        new_zm.safe_loc[zmolecule.index, zmat_values] += C_deg
         return new_zm
     return get_new_zm
 
@@ -242,11 +251,12 @@ def is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
                 abs(grad_energy_X).max() < gtol)
 
 
-def get_next_step(grads_energy_C):
+def get_next_step(gradients_energy_C):
     r"""Returns the next step in the BFGS algorithm.
 
     Args:
-        grads_energy_C (collections.deque): A two element deque, that contains
+        gradients_energy_C (collections.deque): A two element deque,
+            that contains
             the current and previous gradient in internal coordinates.
             The order is: ``[previous, current]``.
             Each gradient is flatted out in the following order
@@ -283,8 +293,8 @@ def get_next_step(grads_energy_C):
         numpy.ndarray: An float array with the same shape as the gradients.
     """
     # @Thorsten I assert this!
-    if len(grads_energy_C) != 2:
+    if len(gradients_energy_C) != 2:
         raise ValueError('Only deques of length 2 allowed')
-    next_step = np.empty_like(grads_energy_C[0])
+    next_step = np.empty_like(gradients_energy_C[0])
 
     return next_step
