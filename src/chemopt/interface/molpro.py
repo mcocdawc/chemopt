@@ -1,11 +1,13 @@
 import inspect
 import os
 import subprocess
+from io import StringIO
 from os.path import splitext
 from subprocess import run
 
-import cclib
 import chemcoord as cc
+
+import cclib
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
@@ -45,15 +47,9 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     if el_calc_input is None:
         el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
 
-    if isinstance(molecule, cc.Cartesian):
-        geometry = molecule.to_xyz(sort_index=False)
-    elif isinstance(molecule, cc.Zmat):
-        geometry = molecule.get_cartesian().to_xyz(sort_index=False)
-    else:
-        geometry = molecule
-
     input_str = generate_input_file(
-        molecule=geometry, hamiltonian=hamiltonian, basis=basis, charge=charge,
+        molecule=molecule,
+        hamiltonian=hamiltonian, basis=basis, charge=charge,
         calculation_type=calculation_type, forces=forces,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
@@ -103,6 +99,11 @@ def generate_input_file(molecule, hamiltonian, basis, charge=0,
     Returns:
         str : Molpro input.
     """
+    if isinstance(molecule, str):
+        molecule = molecule.read_xyz(StringIO(molecule))
+    elif isinstance(molecule, cc.Zmat):
+        molecule = molecule.get_cartesian()
+
     get_output = """\
 *** {title}
 
@@ -126,7 +127,7 @@ geometry = {{
         wfn_symmetry, multiplicity)
 
     out = get_output(title=title, basis_str=_get_basis_str(basis),
-                     geometry=molecule,
+                     geometry=molecule.to_xyz(sort_index=False),
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
                      calculation_type=_get_calculation_type(calculation_type))
