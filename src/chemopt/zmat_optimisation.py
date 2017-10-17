@@ -332,7 +332,6 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
         First float array is the next step,
         the second float array is the new approximated hessian.
     """
-    # @Thorsten I assert this!
     if len(gradients_energy_C) != 2:
         raise ValueError('Only deques of length 2 allowed')
     dg = gradients_energy_C[1] - gradients_energy_C[0]
@@ -342,6 +341,8 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     xtGx = multi_dot([dx, hess_old, dx])
     correction = outer(dg, dg) / inner(dg, dx) - GxxtG / xtGx
     hess_new = hess_old + correction
+
+    # @thorsten get new step using hessin
 
 
     return next_step, hess_new
