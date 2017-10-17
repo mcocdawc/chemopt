@@ -5,6 +5,8 @@ from datetime import datetime
 from os.path import basename, join, normpath, splitext
 
 import numpy as np
+from numpy import outer, inner, dot
+from numpy.linalg import multi_dot
 import scipy.optimize
 
 from cclib.parser.utils import convertor
@@ -52,14 +54,15 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
 
     energies, structures, gradients_energy_C = [], [], deque([])
     grad_energy_X = None
-    new_zm = zmolecule.copy()
+    hess = None
+    zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
     n = 1
     while not is_converged(energies, grad_energy_X):
-        new_zm = get_new_zm(new_zm, gradients_energy_C)
-        energy, grad_energy_X, grad_energy_C = V(new_zm)
-        new_zm.metadata['energy'] = energy
-        structures.append(new_zm)
+        zm, hess = get_new_zm(structures, gradients_energy_C, hess)
+        energy, grad_energy_X, grad_energy_C = V(zm)
+        zm.metadata['energy'] = energy
+        structures.append(zm)
         energies.append(energy)
         gradients_energy_C.append(grad_energy_C.flatten())
         if len(gradients_energy_C) == 3:
@@ -98,27 +101,36 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
 
 
 def _get_new_zm_f_generator(zmolecule):
-    def get_new_zm(previous_zmat, gradients_energy_C):
+    def get_new_zm(structures, gradients_energy_C, hess_old):
         zmat_values = ['bond', 'angle', 'dihedral']
+
+        def get_C_rad(zmolecule):
+            C = zmolecule.loc[:, zmat_values].values
+            C[:, [1, 2]] = np.radians(C[:, [1, 2]])
+            return C.flatten()
+
         if len(gradients_energy_C) == 0:
-            return previous_zmat
-
-        new_zm = previous_zmat.copy()
-        if len(gradients_energy_C) == 1:
-            # @Thorsten here I need to introduce damping
-            damping = 0.3
-            p = - damping * gradients_energy_C[0]
+            new_zm, hess_new = zmolecule, None
         else:
-            # p = get_next_step(gradients_energy_C)
+            new_zm = structures[-1].copy()
+            if len(gradients_energy_C) == 1:
+                # @Thorsten here I need to introduce damping
+                hess_new = None
+                damping = 0.3
+                p = - damping * gradients_energy_C[0]
+            else:
+                # last_two_C = [get_C_rad(zm) for zm in structures[-2:]]
+                # p, hess_new = get_next_step(last_two_C, gradients_energy_C)
 
-            # @Thorsten this works but is horribly slow
-            damping = 0.3
-            p = - damping * gradients_energy_C[1]
+                # @Thorsten this works but is horribly slow
+                hess_new = None
+                damping = 0.3
+                p = - damping * gradients_energy_C[1]
 
-        C_deg = p.reshape((3, len(p) // 3), order='F').T
-        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
-        new_zm.safe_loc[zmolecule.index, zmat_values] += C_deg
-        return new_zm
+            C_deg = p.reshape((3, len(p) // 3), order='F').T
+            C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+            new_zm.safe_loc[zmolecule.index, zmat_values] += C_deg
+        return new_zm, hess_new
     return get_new_zm
 
 
@@ -258,10 +270,29 @@ def is_converged(energies, grad_energy_X, etol=1e-8, gtol=1e-5):
                 abs(grad_energy_X).max() < gtol)
 
 
-def get_next_step(gradients_energy_C):
+def get_next_step(last_two_C, gradients_energy_C, hess_old):
     r"""Returns the next step in the BFGS algorithm.
 
     Args:
+        last_two_C (list): A two list of the current and previous zmat values.
+            The order is: ``[previous, current]``.
+            Each array is flatted out in the following order
+
+            .. math::
+
+                \left[
+                    r_1,
+                    \alpha_1,
+                    \delta_1,
+                    r_2,
+                    \alpha_2,
+                    \delta_2,
+                    ...
+                \right]
+
+            And again :math:`r_i, \alpha_i, \delta_i`
+            are the bond, angle, and dihedral of the :math:`i`-th atom.
+            The units are Angstrom and radians.
         gradients_energy_C (collections.deque): A two element deque,
             that contains
             the current and previous gradient in internal coordinates.
@@ -297,11 +328,18 @@ def get_next_step(gradients_energy_C):
 
 
     Returns:
-        numpy.ndarray: An float array with the same shape as the gradients.
+        numpy.ndarray: An float array with the same shape as the last_two_C.
     """
     # @Thorsten I assert this!
     if len(gradients_energy_C) != 2:
         raise ValueError('Only deques of length 2 allowed')
-    next_step = np.empty_like(gradients_energy_C[0])
+    dg = gradients_energy_C[1] - gradients_energy_C[0]
+    dx = last_two_C[1] - last_two_C[0]
 
-    return next_step
+    GxxtG = multi_dot([hess_old, outer(dx, dx), hess_old])
+    xtGx = multi_dot([dx, hess_old, dx])
+    correction = outer(dg, dg) / inner(dg, dx) - GxxtG / xtGx
+    hess_new = hess_old + correction
+
+
+    return next_step, hess_new
