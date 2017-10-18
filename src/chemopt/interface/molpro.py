@@ -20,7 +20,8 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
               forces=fixed_defaults['forces'],
               title=fixed_defaults['title'],
               multiplicity=fixed_defaults['multiplicity'],
-              wfn_symmetry=fixed_defaults['wfn_symmetry']):
+              wfn_symmetry=fixed_defaults['wfn_symmetry'],
+              num_procs=None, num_threads=None, mem_per_proc=None):
     """Calculate the energy of a molecule using Molpro.
 
     Args:
@@ -36,6 +37,9 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         title (str): {title}
         multiplicity (int): {multiplicity}
         wfn_symmetry (int): {wfn_symmetry}
+        num_procs (int): {num_procs}
+        num_threads (int): {num_threads}
+        mem_per_proc (str): {mem_per_proc}
 
 
     Returns:
@@ -46,6 +50,12 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         molpro_exe = conf_defaults['molpro_exe']
     if el_calc_input is None:
         el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
+    if num_procs is None:
+        num_procs = conf_defaults['num_procs']
+    if num_threads is None:
+        num_threads = conf_defaults['num_threads']
+    if mem_per_proc is None:
+        mem_per_proc = conf_defaults['mem_per_proc']
 
     input_str = generate_input_file(
         molecule=molecule,
@@ -60,6 +70,9 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     with open(input_path, 'w') as f:
         f.write(input_str)
 
+    print('num_procs', num_procs)
+    print('mem_per_proc', mem_per_proc)
+    print('num_threads', num_threads)
     run([molpro_exe, input_path], stdout=subprocess.PIPE)
 
     return parse_output(output_path)
@@ -79,9 +92,14 @@ def parse_output(output_path):
 
 
 @substitute_docstr
-def generate_input_file(molecule, hamiltonian, basis, charge=0,
-                        calculation_type='Single Point', forces=False,
-                        title='', multiplicity=1, wfn_symmetry=1):
+def generate_input_file(molecule, hamiltonian, basis,
+                        charge=fixed_defaults['charge'],
+                        calculation_type=fixed_defaults['calculation_type'],
+                        forces=fixed_defaults['forces'],
+                        title=fixed_defaults['title'],
+                        multiplicity=fixed_defaults['title'],
+                        wfn_symmetry=fixed_defaults['wfn_symmetry'],
+                        mem_per_proc=None):
     """Generate a molpro input file.
 
     Args:
@@ -104,9 +122,11 @@ def generate_input_file(molecule, hamiltonian, basis, charge=0,
         molecule = molecule.read_xyz(StringIO(molecule))
     elif isinstance(molecule, cc.Zmat):
         molecule = molecule.get_cartesian()
+    if mem_per_proc is None:
+        mem_per_proc = conf_defaults['mem_per_proc']
 
     get_output = """\
-*** {title}
+***, {title} memory,
 
 gprint, basis
 gprint, orbital

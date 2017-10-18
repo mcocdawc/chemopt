@@ -356,5 +356,4 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     # lowest_evec[-1] might be very low, maybe implement warnings?
     next_step = lowest_evec[:-1] / lowest_evec[-1]
 
-
     return next_step, hess_new

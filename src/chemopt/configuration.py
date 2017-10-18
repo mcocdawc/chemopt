@@ -37,6 +37,9 @@ def provide_defaults():
     settings = {}
     settings['defaults'] = {}
     settings['defaults']['backend'] = 'molpro'
+    settings['defaults']['num_procs'] = 1
+    settings['defaults']['num_threads'] = 1
+    settings['defaults']['mem_per_proc'] = '150Mb'
     settings['defaults']['molpro_exe'] = 'molpro'
     return settings
 
@@ -101,6 +104,9 @@ def read_configuration_file(settings, filepath=_give_default_file_path()):
         def getfloat(section, key, config):  # pylint:disable=unused-variable
             return config[section].getfloat(key)
         special_actions = {}  # Something different than a string is expected
+        special_actions['defaults'] = {}
+        special_actions['defaults']['num_procs'] = getinteger
+        special_actions['defaults']['num_threads'] = getinteger
         try:
             return special_actions[section][key](section, key, config)
         except KeyError:
@@ -160,4 +166,16 @@ docstring['title'] = "The title to be printed in input and output.\n"
 docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
 with the molpro \
 `notation <https://www.molpro.net/info/2015.1/doc/manual/node36.html>`_.\n"
+
+
+docstring['num_procs'] = "The number of processes to spawn."
+
+docstring['num_threads'] = "The number of threads per process."
+
+docstring['mem_per_proc'] = "Memory per process. \
+This is a string with a number and a unit like '800 Mb. \
+SI and binary prefixes are supported. \
+Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
+for parsing."
+
 substitute_docstr = Substitution(**docstring)
