@@ -5,8 +5,8 @@ from datetime import datetime
 from os.path import basename, join, normpath, splitext
 
 import numpy as np
-from numpy import outer, inner, dot
-from numpy.linalg import multi_dot
+from numpy import outer, inner, dot, concatenate, append
+from numpy.linalg import multi_dot, eigh
 import scipy.optimize
 
 from cclib.parser.utils import convertor
@@ -58,7 +58,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
     zm = zmolecule.copy()
     get_new_zm = _get_new_zm_f_generator(zmolecule)
     n = 1
-    while not is_converged(energies, grad_energy_X):
+    while not is_converged(energies, grad_energy_X) and n < 100:
         zm, hess = get_new_zm(structures, gradients_energy_C, hess)
         energy, grad_energy_X, grad_energy_C = V(zm)
         zm.metadata['energy'] = energy
@@ -115,17 +115,21 @@ def _get_new_zm_f_generator(zmolecule):
             new_zm = structures[-1].copy()
             if len(gradients_energy_C) == 1:
                 # @Thorsten here I need to introduce damping
-                hess_new = None
+                # @Oskar creating the parametrized Hessian can
+                #       probably be done more elegantly (need natoms).
+                hess_new = np.diag([0.5, 0.2, 0.1] *
+                                   (len(gradients_energy_C[0]) // 3))
                 damping = 0.3
                 p = - damping * gradients_energy_C[0]
             else:
-                # last_two_C = [get_C_rad(zm) for zm in structures[-2:]]
-                # p, hess_new = get_next_step(last_two_C, gradients_energy_C)
+                last_two_C = [get_C_rad(zm) for zm in structures[-2:]]
+                p, hess_new = get_next_step(last_two_C, gradients_energy_C, hess_old)
 
                 # @Thorsten this works but is horribly slow
-                hess_new = None
-                damping = 0.3
-                p = - damping * gradients_energy_C[1]
+                # @Oskar let's comment it out then :)
+                # hess_new = None
+                # damping = 0.3
+                # p = - damping * gradients_energy_C[1]
 
             C_deg = p.reshape((3, len(p) // 3), order='F').T
             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
@@ -248,7 +252,7 @@ def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
 
 
-def is_converged(energies, grad_energy_X, etol=1e-7, gtol=1e-5):
+def is_converged(energies, grad_energy_X, etol=1e-6, gtol=3e-4):
     """Returns if an optimization is converged.
 
     Args:
@@ -342,7 +346,15 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     correction = outer(dg, dg) / inner(dg, dx) - GxxtG / xtGx
     hess_new = hess_old + correction
 
-    # @thorsten get new step using hessin
+    # step determination by rational function method
+    long_grad = append(gradients_energy_C[1], 0)
+    # print(hess_new.shape, gradients_energy_C[1].shape, long_grad.shape)
+    aug_hess = concatenate((hess_new, gradients_energy_C[1][None, :]), axis=0)
+    aug_hess = concatenate((aug_hess, long_grad[:, None]), axis=1)
+    evals, evecs = eigh(aug_hess)
+    lowest_evec = evecs[:, np.argmin(evals)]
+    # lowest_evec[-1] might be very low, maybe implement warnings?
+    next_step = lowest_evec[:-1] / lowest_evec[-1]
 
 
     return next_step, hess_new
