@@ -336,7 +336,6 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
         First float array is the next step,
         the second float array is the new approximated hessian.
     """
-    # @Thorsten I assert this!
     if len(gradients_energy_C) != 2:
         raise ValueError('Only deques of length 2 allowed')
     dg = gradients_energy_C[1] - gradients_energy_C[0]
@@ -346,6 +345,7 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     xtGx = multi_dot([dx, hess_old, dx])
     correction = outer(dg, dg) / inner(dg, dx) - GxxtG / xtGx
     hess_new = hess_old + correction
+
     # step determination by rational function method
     long_grad = append(gradients_energy_C[1], 0)
     # print(hess_new.shape, gradients_energy_C[1].shape, long_grad.shape)
@@ -355,5 +355,6 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     lowest_evec = evecs[:, np.argmin(evals)]
     # lowest_evec[-1] might be very low, maybe implement warnings?
     next_step = lowest_evec[:-1] / lowest_evec[-1]
+
 
     return next_step, hess_new
