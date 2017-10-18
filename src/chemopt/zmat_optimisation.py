@@ -114,16 +114,14 @@ def _get_new_zm_f_generator(zmolecule):
         else:
             new_zm = structures[-1].copy()
             if len(gradients_energy_C) == 1:
-                # @Thorsten here I need to introduce damping
-                # @Oskar creating the parametrized Hessian can
+                # Creating the parametrized Hessian can
                 #       probably be done more elegantly (need natoms).
-                hess_new = np.diag([0.5, 0.2, 0.1] *
-                                   (len(gradients_energy_C[0]) // 3))
-                damping = 0.3
-                p = - damping * gradients_energy_C[0]
+                hess_new = np.diag([0.5, 0.2, 0.1] * len(zmolecule))
+                p = -damping(gradients_energy_C[0])
             else:
                 last_two_C = [get_C_rad(zm) for zm in structures[-2:]]
                 p, hess_new = get_next_step(last_two_C, gradients_energy_C, hess_old)
+                p = damping(p)
 
                 # @Thorsten this works but is horribly slow
                 # @Oskar let's comment it out then :)
@@ -357,3 +355,11 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     next_step = lowest_evec[:-1] / lowest_evec[-1]
 
     return next_step, hess_new
+
+
+def damping(p):
+    p_norm = np.linalg.norm(p)
+    if p_norm < 0.3:
+        return p
+    else:
+        return p * (0.3 / p_norm)
