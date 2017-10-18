@@ -54,7 +54,10 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         with open(md_out, 'w') as f:
             f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
                                 **kwargs))
-        opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+        try:
+            opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+        except StopIteration:
+            pass
         calculated = V(get_calculated=True)
     else:
         pass
@@ -89,6 +92,10 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
                                el_calc_input=el_calc_input, **kwargs)
             energy = convertor(result.scfenergies[0], 'eV', 'hartree')
             grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
+
+            if is_converged(calculated, grad_energy_X):
+                raise StopIteration
+
 
             grad_X = zmolecule.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
@@ -243,3 +250,26 @@ and needed: {delta_time}.
 
 def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
+
+
+def is_converged(calculated, grad_energy_X, etol=1e-6, gtol=3e-4):
+    """Returns if an optimization is converged.
+
+    Args:
+        energies (list): List of energies in hartree.
+        grad_energy_X (numpy.ndarray): Gradient in cartesian coordinates
+            in Hartree / Angstrom.
+        etol (float): Tolerance for the energy.
+        gtol (float): Tolerance for the maximum norm of the gradient.
+
+    Returns:
+        bool:
+    """
+    energies = [x['energy'] for x in calculated]
+    if len(energies) == 0:
+        return False
+    elif len(energies) == 1:
+        return False
+    else:
+        return (abs(energies[-1] - energies[-2]) < etol and
+                abs(grad_energy_X).max() < gtol)
