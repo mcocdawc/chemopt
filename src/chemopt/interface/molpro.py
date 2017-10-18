@@ -71,9 +71,6 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     with open(input_path, 'w') as f:
         f.write(input_str)
 
-    print('num_procs', num_procs)
-    print('mem_per_proc', mem_per_proc)
-    print('num_threads', num_threads)
     run([molpro_exe, '-n {}'.format(num_procs), input_path], stdout=subprocess.PIPE)
 
     return parse_output(output_path)
@@ -129,9 +126,6 @@ def generate_input_file(molecule, hamiltonian, basis,
     get_output = """\
 *** {title}
 memory, {memory}
-
-gprint, basis
-gprint, orbital
 
 basis, {basis_str}
 

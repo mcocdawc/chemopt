@@ -170,7 +170,7 @@ with the molpro \
 
 docstring['num_procs'] = "The number of processes to spawn."
 
-docstring['num_threads'] = "The number of threads per process."
+docstring['num_threads'] = "Currently not Implemented"
 
 docstring['mem_per_proc'] = "Memory per process. \
 This is a string with a number and a unit like '800 Mb. \
