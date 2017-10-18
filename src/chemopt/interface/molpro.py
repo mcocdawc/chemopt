@@ -4,6 +4,7 @@ import subprocess
 from io import StringIO
 from os.path import splitext
 from subprocess import run
+from datasize import DataSize
 
 import chemcoord as cc
 
@@ -73,7 +74,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     print('num_procs', num_procs)
     print('mem_per_proc', mem_per_proc)
     print('num_threads', num_threads)
-    run([molpro_exe, input_path], stdout=subprocess.PIPE)
+    run([molpro_exe, '-n {}'.format(num_procs), input_path], stdout=subprocess.PIPE)
 
     return parse_output(output_path)
 
@@ -126,7 +127,8 @@ def generate_input_file(molecule, hamiltonian, basis,
         mem_per_proc = conf_defaults['mem_per_proc']
 
     get_output = """\
-***, {title} memory,
+*** {title}
+memory, {memory}
 
 gprint, basis
 gprint, orbital
@@ -151,7 +153,8 @@ geometry = {{
                      geometry=molecule.to_xyz(sort_index=False),
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
-                     calculation_type=_get_calculation_type(calculation_type))
+                     calculation_type=_get_calculation_type(calculation_type),
+                     memory=_get_molpro_mem(DataSize(mem_per_proc)))
     return out
 
 
@@ -207,3 +210,11 @@ def _get_calculation_type(calculation_type):
     else:
         raise Exception('Unhandled calculation type: %s' % calculation_type)
     return calc_str
+
+
+def _get_molpro_mem(byte):
+    word = byte // 8
+    for unit in ['', 'k', 'm', 'g']:
+        if word <= 1000 or unit == 'g':
+            return '{}, {}'.format(word, unit)
+        word //= (10 ** 3)
