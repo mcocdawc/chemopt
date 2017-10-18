@@ -26,14 +26,16 @@ def calculate(molecule, hamiltonian, basis,
         el_calc_input (str): {el_calc_input}
         backend (str): {backend}
         charge (int): {charge}
-        calculation_type (str): {calculation_type}
+        calculation_type (str): Currently only 'Single Point' allowed.
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
 
     Returns:
-        cclib.Parser : A `cclib <https://cclib.github.io/>`_
-        parsed data instance.
+        dict: A dictionary with at least the keys
+        ``'structure'`` and ``'energy'`` which contains the energy in Hartree.
+        If forces were calculated, the key ``'gradient'`` contains the
+        gradient in Hartree / Angstrom.
     """
     if backend is None:
         backend = conf_defaults['backend']

@@ -7,10 +7,13 @@ from subprocess import run
 from datasize import DataSize
 
 import chemcoord as cc
+import numpy as np
+import re
 
 import cclib
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
+from chemopt.constants import conv_factor
 
 
 @substitute_docstr
@@ -33,7 +36,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
         charge (int): {charge}
-        calculation_type (str): {calculation_type}
+        calculation_type (str): Currently only 'Single Point' allowed.
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
@@ -42,10 +45,11 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         num_threads (int): {num_threads}
         mem_per_proc (str): {mem_per_proc}
 
-
     Returns:
-        cclib.Parser : A `cclib <https://cclib.github.io/>`_
-        parsed data instance.
+        dict: A dictionary with at least the keys
+        ``'structure'`` and ``'energy'`` which contains the energy in Hartree.
+        If forces were calculated, the key ``'gradient'`` contains the
+        gradient in Hartree / Angstrom.
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
@@ -71,7 +75,8 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     with open(input_path, 'w') as f:
         f.write(input_str)
 
-    run([molpro_exe, '-n {}'.format(num_procs), input_path], stdout=subprocess.PIPE)
+    run([molpro_exe, '-n {}'.format(num_procs), input_path],
+        stdout=subprocess.PIPE)
 
     return parse_output(output_path)
 
@@ -83,10 +88,49 @@ def parse_output(output_path):
         output_path (str):
 
     Returns:
-        cclib.Parser : A `cclib <https://cclib.github.io/>`_
-        parsed data instance.
+        dict: A dictionary with at least the keys
+        ``'structure'`` and ``'energy'`` which contains the energy in Hartree.
+        If forces were calculated, the key ``'gradient'`` contains the
+        gradient in Hartree / Angstrom.
     """
-    return cclib.parser.molproparser.Molpro(output_path).parse()
+    def read_gradient(f, n_atoms):
+        for _ in range(3):
+            f.readline()
+        gradient = []
+        lines_read = 0
+        while lines_read < n_atoms:
+            line = f.readline()
+            if line != '\n':
+                gradient.append([float(x) for x in line.split()[1:]])
+                lines_read += 1
+        gradient = np.array(gradient)
+        gradient /= conv_factor('Bohr', 'Angstrom')
+        return gradient
+
+    def read_structure(f):
+        beggining = f.tell()
+        n_atoms = int(f.readline())
+        f.seek(beggining)
+        molecule = cc.Cartesian.read_xyz(f, nrows=n_atoms, engine='python')
+        return molecule
+
+    scf_energy = re.compile('\s*!(RHF|UHF|RKS) STATE 1.1 Energy')
+    output = {}
+    with open(output_path, 'r') as f:
+        line = f.readline()
+        while line:
+            if 'geometry = {' in line:
+                molecule = read_structure(f)
+            elif scf_energy.match(line):
+                output['energy'] = float(line.split()[-1])
+            elif 'GRADIENT FOR STATE' in line:
+                output['gradient'] = read_gradient(f, len(molecule))
+            line = f.readline()
+
+    for key in output:
+        molecule.metadata[key] = output[key]
+    output['structure'] = molecule
+    return output
 
 
 @substitute_docstr
@@ -210,5 +254,5 @@ def _get_molpro_mem(byte):
     word = byte // 8
     for unit in ['', 'k', 'm', 'g']:
         if word <= 1000 or unit == 'g':
-            return '{}, {}'.format(word, unit)
-        word //= (10 ** 3)
+            return '{:.2f}, {}'.format(float(word), unit)
+        word /= (10 ** 3)

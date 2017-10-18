@@ -5,11 +5,10 @@ from datetime import datetime
 from os.path import basename, join, normpath, splitext
 
 import numpy as np
-from numpy import outer, inner, dot, concatenate, append
+from numpy import outer, inner, concatenate, append
 from numpy.linalg import multi_dot, eigh
 import scipy.optimize
 
-from cclib.parser.utils import convertor
 from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import conf_defaults, fixed_defaults
 from chemopt.interface.generic import calculate
@@ -26,7 +25,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
 
     Returns:
         list: A list of dictionaries. Each dictionary has three keys:
-        ``['energy', 'grad_energy', 'zmolecule']``.
+        ``['energy', 'structure']``.
         The energy is given in Hartree
         The energy gradient ('grad_energy') is given in internal coordinates.
         The units are Hartree / Angstrom for bonds and
@@ -79,14 +78,15 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
                              molden_out=molden_out)
         f.write(footer)
     return structures, energies
+    # return [{'structure': m, 'energy': e} for m, e in zip(structures, energies)]
 
 
 def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
     def V(zmolecule):
         result = calculate(molecule=zmolecule, forces=True,
                            el_calc_input=el_calc_input, **kwargs)
-        energy = convertor(result.scfenergies[0], 'eV', 'hartree')
-        grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
+        energy = result['energy']
+        grad_energy_X = result['gradient']
 
         grad_X = zmolecule.get_grad_cartesian(
             as_function=False, drop_auto_dummies=True)
@@ -138,7 +138,9 @@ def _get_new_zm_f_generator(zmolecule):
 
 def _get_header(zmolecule, hamiltonian, basis, start_time, backend=None,
                 charge=fixed_defaults['charge'], title=fixed_defaults['title'],
-                multiplicity=fixed_defaults['multiplicity'], **kwargs):
+                multiplicity=fixed_defaults['multiplicity'],
+                num_procs=conf_defaults['num_procs'],
+                mem_per_proc=conf_defaults['mem_per_proc'], **kwargs):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
@@ -170,13 +172,16 @@ Starting {start_time}
                   + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
         return header
 
-    def _get_calc_setup(backend, hamiltonian, charge, multiplicity):
+    def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
+                        num_procs, mem_per_proc):
         data = [['Hamiltonian', hamiltonian],
                 ['Charge', charge],
-                ['Multiplicity', multiplicity]]
+                ['Multiplicity', multiplicity],
+                ['Num_procs', num_procs],
+                ['Mem_per_proc', mem_per_proc]]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
     calculation_setup = _get_calc_setup(backend, hamiltonian, charge,
-                                        multiplicity)
+                                        multiplicity, num_procs, mem_per_proc)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
