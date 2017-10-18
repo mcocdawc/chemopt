@@ -87,15 +87,7 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
                            el_calc_input=el_calc_input, **kwargs)
         energy = result['energy']
         grad_energy_X = result['gradient']
-
-        grad_X = zmolecule.get_grad_cartesian(
-            as_function=False, drop_auto_dummies=True)
-        grad_energy_C = np.sum(
-            grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
-
-        for i in range(min(3, grad_energy_C.shape[0])):
-            grad_energy_C[i, i:] = 0.
-
+        grad_energy_C = get_grad_energy_C(zmolecule, grad_energy_X)
         return energy, grad_energy_X, grad_energy_C
     return V
 
@@ -114,20 +106,18 @@ def _get_new_zm_f_generator(zmolecule):
         else:
             new_zm = structures[-1].copy()
             if len(gradients_energy_C) == 1:
-                # Creating the parametrized Hessian can
-                #       probably be done more elegantly (need natoms).
                 hess_new = np.diag([0.5, 0.2, 0.1] * len(zmolecule))
-                p = -damping(gradients_energy_C[0])
+                p = -gradients_energy_C[0]
             else:
                 last_two_C = [get_C_rad(zm) for zm in structures[-2:]]
                 p, hess_new = get_next_step(last_two_C, gradients_energy_C, hess_old)
-                p = damping(p)
 
                 # @Thorsten this works but is horribly slow
                 # @Oskar let's comment it out then :)
                 # hess_new = None
                 # damping = 0.3
                 # p = - damping * gradients_energy_C[1]
+            p = damp(p * get_e_tree(len(p)))
 
             C_deg = p.reshape((3, len(p) // 3), order='F').T
             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
@@ -362,9 +352,27 @@ def get_next_step(last_two_C, gradients_energy_C, hess_old):
     return next_step, hess_new
 
 
-def damping(p):
+def damp(p, factor=0.05):
     p_norm = np.linalg.norm(p)
-    if p_norm < 0.3:
+    if p_norm < factor:
         return p
     else:
-        return p * (0.3 / p_norm)
+        return factor * (p / p_norm)
+
+def get_e_tree(total_number):
+    factors = []
+    x_max = int(np.ceil(np.log(total_number)))
+    for i in range(x_max + 1):
+        n = int(np.ceil(np.exp(i)))
+        factors += [np.exp(i -x_max) for _ in range(n)]
+    return np.array(factors[:total_number])
+
+def get_grad_energy_C(zmolecule, grad_energy_X):
+    grad_X = zmolecule.get_grad_cartesian(
+        as_function=False, drop_auto_dummies=True)
+    grad_energy_C = np.sum(
+        grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
+
+    for i in range(min(3, grad_energy_C.shape[0])):
+        grad_energy_C[i, i:] = 0.
+    return grad_energy_C
