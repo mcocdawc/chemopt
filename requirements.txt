@@ -1,2 +1,3 @@
-chemcoord>=0.2
-cclib
+chemcoord>=2.0.2
+datasize
+tabulate
