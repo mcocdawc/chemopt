@@ -1,4 +1,3 @@
-import chemcoord as cc
 from chemopt import export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
@@ -44,6 +43,6 @@ def calculate(molecule, hamiltonian, basis,
             el_calc_input=el_calc_input, molecule=molecule,
             hamiltonian=hamiltonian, basis=basis, charge=charge,
             calculation_type=calculation_type, forces=forces, title=title,
-            multiplicity=multiplicity, **kwargs)
+            multiplicity=multiplicity)
     else:
         raise ValueError('Backend {} is not implemented.'.format(backend))

@@ -1,12 +1,11 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, join, normpath, splitext
+from os.path import basename, normpath, splitext
 
 import numpy as np
-import scipy.optimize
+from scipy.optimize import minimize
 
-from cclib.parser.utils import convertor
 from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
@@ -15,10 +14,16 @@ from tabulate import tabulate
 
 
 @substitute_docstr
-def optimise(zmolecule, hamiltonian, basis, symbols=None,
-             md_out=None, el_calc_input=None,
-             molden_out=None, etol=fixed_defaults['etol'],
-             gtol=fixed_defaults['gtol'], **kwargs):
+def optimise(zmolecule, hamiltonian, basis,
+             symbols=None,
+             md_out=None, el_calc_input=None, molden_out=None,
+             etol=fixed_defaults['etol'],
+             gtol=fixed_defaults['gtol'],
+             backend=conf_defaults['backend'],
+             charge=fixed_defaults['charge'],
+             title=fixed_defaults['title'],
+             multiplicity=fixed_defaults['multiplicity'],
+             num_procs=None, mem_per_proc=None, **kwargs):
     """Optimize a molecule.
 
     Args:
@@ -27,13 +32,16 @@ def optimise(zmolecule, hamiltonian, basis, symbols=None,
         basis (str): {basis}
         symbols (sympy expressions):
         el_calc_input (str): {el_calc_input}
+        md_out (str): {md_out}
+        molden_out (str): {molden_out}
         backend (str): {backend}
         charge (int): {charge}
-        forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
         etol (float): {etol}
         gtol (float): {gtol}
+        num_procs (int): {num_procs}
+        mem_per_proc (str): {mem_per_proc}
 
     Returns:
         list: A list of dictionaries. Each dictionary has three keys:
@@ -45,8 +53,7 @@ def optimise(zmolecule, hamiltonian, basis, symbols=None,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    base = splitext(basename(inspect.stack()[-1][1]))[0]
-    if name == '__main__':
+    if __name__ == '__main__':
         if md_out is None:
             raise ValueError('md_out has to be provided when executing '
                              'from an interactive session.')
@@ -56,24 +63,44 @@ def optimise(zmolecule, hamiltonian, basis, symbols=None,
         if el_calc_input is None:
             raise ValueError('el_calc_input has to be provided when executing '
                              'from an interactive session.')
-    if md_out is None:
-        md_out = '{}.md'.format(base)
-    if molden_out is None:
-        molden_out = '{}.molden'.format(base)
-    if el_calc_input is None:
-        el_calc_input = join('{}_el_calcs'.format(base), '{}.inp'.format(base))
+    else:
+        base = splitext(basename(inspect.stack()[-1][1]))[0]
+        if md_out is None:
+            md_out = '{}.md'.format(base)
+        if molden_out is None:
+            molden_out = '{}.molden'.format(base)
+        if el_calc_input is None:
+            el_calc_input = os.path.join('{}_el_calcs'.format(base),
+                                         '{}.inp'.format(base))
+    if num_procs is None:
+        num_procs = conf_defaults['num_procs']
+    if mem_per_proc is None:
+        mem_per_proc = conf_defaults['mem_per_proc']
+
     for filepath in [md_out, molden_out, el_calc_input]:
         rename_existing(filepath)
 
     t1 = datetime.now()
     if symbols is None:
-        V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
+        V = _get_V_function(zmolecule=zmolecule, el_calc_input=el_calc_input,
+                            md_out=md_out, backend=backend,
+                            hamiltonian=hamiltonian, basis=basis,
+                            charge=charge, title=title,
+                            multiplicity=multiplicity,
+                            etol=etol, gtol=gtol,
+                            num_procs=num_procs,
+                            mem_per_proc=mem_per_proc, **kwargs)
         with open(md_out, 'w') as f:
-            f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
-                                **kwargs))
+            header = _get_header(
+                zmolecule=zmolecule, backend=backend, hamiltonian=hamiltonian,
+                basis=basis, charge=charge, multiplicity=multiplicity,
+                num_procs=num_procs,
+                start_time=t1, title=title,
+                mem_per_proc=mem_per_proc, etol=etol, gtol=gtol)
+            f.write(header)
 
         try:
-            opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+            minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
         except StopIteration:
             pass
         calculated = V(get_calculated=True)
@@ -97,7 +124,10 @@ def _get_C_rad(zmolecule):
     return C_rad.flatten(order='F')
 
 
-def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
+def _get_V_function(
+        zmolecule, el_calc_input, md_out, backend,
+        hamiltonian, basis, charge, title, multiplicity,
+        etol, gtol, num_procs, mem_per_proc, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
@@ -106,14 +136,17 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
         elif C_rad is not None:
             zmolecule = get_zm_from_C(C_rad)
 
-            result = calculate(molecule=zmolecule, forces=True,
-                               el_calc_input=el_calc_input, **kwargs)
-            energy = convertor(result.scfenergies[0], 'eV', 'hartree')
-            grad_energy_X = result.grads[0] / convertor(1, 'bohr', 'Angstrom')
+            result = calculate(
+                molecule=zmolecule, forces=True, el_calc_input=el_calc_input,
+                backend=backend, hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
-            if is_converged(calculated, grad_energy_X):
+            energy, grad_energy_X = result['energy'], result['gradient']
+
+            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
                 raise StopIteration
-
 
             grad_X = zmolecule.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
@@ -137,8 +170,9 @@ def _get_V_function(zmolecule, el_calc_input, md_out, **kwargs):
 
 
 def _get_zm_from_C_generator(zmolecule):
-    def get_zm_from_C(C_rad=None, previous_zmats=[zmolecule],
-                      get_previous=False):  # pylint:disable=dangerous-default-value
+    def get_zm_from_C(
+            C_rad=None, previous_zmats=[zmolecule],
+            get_previous=False):  # pylint:disable=dangerous-default-value
         if get_previous:
             return previous_zmats
         elif C_rad is not None:
@@ -156,7 +190,7 @@ def _get_zm_from_C_generator(zmolecule):
 
 
 def _get_header(zmolecule, backend, hamiltonian, basis, charge, title,
-                multiplicity, etol, gtol, start_time, **kwargs):
+                multiplicity, etol, gtol, start_time, num_procs, mem_per_proc):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
@@ -189,17 +223,20 @@ Starting {start_time}
         return header
 
     def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
-                        basis, etol, gtol):
+                        basis, etol, gtol, num_procs, mem_per_proc):
         data = [['Hamiltonian', hamiltonian],
                 ['Basis', basis],
                 ['Charge', charge],
-                ['Multiplicity', multiplicity],
-                ['Convergencetest energy', etol],
-                ['Convergencetest gradient', gtol]
+                ['Spin multiplicity', multiplicity],
+                ['Convergence energy', etol],
+                ['Convergence gradient', gtol],
+                ['Number of processes', num_procs],
+                ['Memory per process', mem_per_proc]
                 ]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
-    calculation_setup = _get_calc_setup(backend, hamiltonian, charge,
-                                        multiplicity, basis, etol, gtol)
+    calculation_setup = _get_calc_setup(
+        backend, hamiltonian, charge, multiplicity, basis,
+        etol, gtol, num_procs, mem_per_proc)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
@@ -274,15 +311,17 @@ def _get_isostr(time):
     return time.replace(microsecond=0).isoformat()
 
 
-def is_converged(calculated, grad_energy_X, etol=1e-6, gtol=3e-4):
+@substitute_docstr
+def is_converged(calculated, grad_energy_X, etol=fixed_defaults['etol'],
+                 gtol=fixed_defaults['gtol']):
     """Returns if an optimization is converged.
 
     Args:
         energies (list): List of energies in hartree.
         grad_energy_X (numpy.ndarray): Gradient in cartesian coordinates
             in Hartree / Angstrom.
-        etol (float): Tolerance for the energy.
-        gtol (float): Tolerance for the maximum norm of the gradient.
+        etol (float): {etol}
+        gtol (float): {gtol}
 
     Returns:
         bool:

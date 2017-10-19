@@ -155,6 +155,17 @@ If it is None, the filename of the calling python script is used \
 (With the suffix ``.inp`` instead of ``.py``). \
 The output will be ``os.path.splitext(el_calc_input)[0] + '.out'``.\n"
 
+docstring['md_out'] = "Specify the output filename for \
+chemopt output files. \
+If it is None, the filename of the calling python script is used \
+(With the suffix ``.inp`` instead of ``.py``). \
+The output will be ``os.path.splitext(el_calc_input)[0] + '.md'``.\n"
+
+docstring['molden_out'] = "Specify the output filename for \
+the molden file from a geometry optimisation. \
+If it is None, the filename of the calling python script is used \
+(With the suffix ``.inp`` instead of ``.py``). \
+The output will be ``os.path.splitext(el_calc_input)[0] + '.molden'``.\n"
 
 docstring['backend'] = "Specify which QM program suite shoud be used. \
 Allowed values are {}, \
@@ -169,13 +180,16 @@ docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
 with the molpro \
 `notation <https://www.molpro.net/info/2015.1/doc/manual/node36.html>`_.\n"
 
+docstring['etol'] = "Convergence criterium for the energy."
+
+docstring['gtol'] = "Convergence criterium for the gradient."
 
 docstring['num_procs'] = "The number of processes to spawn."
 
 docstring['num_threads'] = "Currently not Implemented"
 
 docstring['mem_per_proc'] = "Memory per process. \
-This is a string with a number and a unit like '800 Mb. \
+This is a string with a number and a unit like '800 Mb'. \
 SI and binary prefixes are supported. \
 Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
 for parsing."

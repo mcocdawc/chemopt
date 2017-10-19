@@ -10,7 +10,6 @@ import chemcoord as cc
 import numpy as np
 import re
 
-import cclib
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.constants import conv_factor
@@ -25,7 +24,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
               title=fixed_defaults['title'],
               multiplicity=fixed_defaults['multiplicity'],
               wfn_symmetry=fixed_defaults['wfn_symmetry'],
-              num_procs=None, num_threads=None, mem_per_proc=None):
+              num_procs=None, mem_per_proc=None):
     """Calculate the energy of a molecule using Molpro.
 
     Args:
@@ -42,7 +41,6 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         multiplicity (int): {multiplicity}
         wfn_symmetry (int): {wfn_symmetry}
         num_procs (int): {num_procs}
-        num_threads (int): {num_threads}
         mem_per_proc (str): {mem_per_proc}
 
     Returns:
@@ -53,15 +51,13 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
-    if name == '__main__' and el_calc_input is None:
+    if __name__ == '__main__' and el_calc_input is None:
         raise ValueError('el_calc_input has to be provided when executing '
                          'from an interactive session.')
     if el_calc_input is None:
         el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
     if num_procs is None:
         num_procs = conf_defaults['num_procs']
-    if num_threads is None:
-        num_threads = conf_defaults['num_threads']
     if mem_per_proc is None:
         mem_per_proc = conf_defaults['mem_per_proc']
 
@@ -158,6 +154,7 @@ def generate_input_file(molecule, hamiltonian, basis,
         title (str): {title}
         multiplicity (int): {multiplicity}
         wfn_symmetry (int): {wfn_symmetry}
+        mem_per_proc (str): {mem_per_proc}
 
 
     Returns:
