@@ -25,6 +25,8 @@ fixed_defaults['calculation_type'] = 'Single Point'
 fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
+fixed_defaults['etol'] = 1e-7
+fixed_defaults['gtol'] = 1e-5
 
 
 def _give_default_file_path():
