@@ -17,7 +17,7 @@ from tabulate import tabulate
 @substitute_docstr
 def optimise(zmolecule, hamiltonian, basis, symbols=None,
              md_out=None, el_calc_input=None,
-             molden_out=None, opt_f=None, etol=fixed_defaults['etol'],
+             molden_out=None, etol=fixed_defaults['etol'],
              gtol=fixed_defaults['gtol'], **kwargs):
     """Optimize a molecule.
 
@@ -29,7 +29,6 @@ def optimise(zmolecule, hamiltonian, basis, symbols=None,
         el_calc_input (str): {el_calc_input}
         backend (str): {backend}
         charge (int): {charge}
-        calculation_type (str): {calculation_type}
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
@@ -46,25 +45,28 @@ def optimise(zmolecule, hamiltonian, basis, symbols=None,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    if opt_f is None:
-        opt_f = scipy.optimize.minimize
     base = splitext(basename(inspect.stack()[-1][1]))[0]
+    if name == '__main__':
+        if md_out is None:
+            raise ValueError('md_out has to be provided when executing '
+                             'from an interactive session.')
+        if molden_out is None:
+            raise ValueError('molden_out has to be provided when executing '
+                             'from an interactive session.')
+        if el_calc_input is None:
+            raise ValueError('el_calc_input has to be provided when executing '
+                             'from an interactive session.')
     if md_out is None:
         md_out = '{}.md'.format(base)
     if molden_out is None:
         molden_out = '{}.molden'.format(base)
     if el_calc_input is None:
-        el_calc_input = join('{}_el_calcs'.format(base),
-                             '{}.inp'.format(base))
+        el_calc_input = join('{}_el_calcs'.format(base), '{}.inp'.format(base))
     for filepath in [md_out, molden_out, el_calc_input]:
         rename_existing(filepath)
 
     t1 = datetime.now()
     if symbols is None:
-        # # TODO continue here
-        # while not is_converged(energies, grads_X):
-        #     energies, grads_X = 1, 2
-
         V = _get_V_function(zmolecule, el_calc_input, md_out, **kwargs)
         with open(md_out, 'w') as f:
             f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
