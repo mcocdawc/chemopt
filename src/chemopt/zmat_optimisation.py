@@ -8,18 +8,33 @@ import scipy.optimize
 
 from cclib.parser.utils import convertor
 from chemcoord.xyz_functions import to_molden
-from chemopt.configuration import conf_defaults, fixed_defaults
+from chemopt.configuration import (conf_defaults, fixed_defaults,
+                                   substitute_docstr)
 from chemopt.interface.generic import calculate
 from tabulate import tabulate
 
 
-def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
-             molden_out=None, opt_f=None, **kwargs):
+@substitute_docstr
+def optimise(zmolecule, hamiltonian, basis, symbols=None,
+             md_out=None, el_calc_input=None,
+             molden_out=None, opt_f=None, etol=fixed_defaults['etol'],
+             gtol=fixed_defaults['gtol'], **kwargs):
     """Optimize a molecule.
 
     Args:
         zmolecule (chemcoord.Zmat):
+        hamiltonian (str): {hamiltonian}
+        basis (str): {basis}
         symbols (sympy expressions):
+        el_calc_input (str): {el_calc_input}
+        backend (str): {backend}
+        charge (int): {charge}
+        calculation_type (str): {calculation_type}
+        forces (bool): {forces}
+        title (str): {title}
+        multiplicity (int): {multiplicity}
+        etol (float): {etol}
+        gtol (float): {gtol}
 
     Returns:
         list: A list of dictionaries. Each dictionary has three keys:
@@ -54,6 +69,7 @@ def optimise(zmolecule, symbols=None, md_out=None, el_calc_input=None,
         with open(md_out, 'w') as f:
             f.write(_get_header(zmolecule, start_time=_get_isostr(t1),
                                 **kwargs))
+
         try:
             opt_f(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
         except StopIteration:
@@ -137,9 +153,8 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def _get_header(zmolecule, hamiltonian, basis, start_time, backend=None,
-                charge=fixed_defaults['charge'], title=fixed_defaults['title'],
-                multiplicity=fixed_defaults['multiplicity'], **kwargs):
+def _get_header(zmolecule, backend, hamiltonian, basis, charge, title,
+                multiplicity, etol, gtol, start_time, **kwargs):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
@@ -171,13 +186,18 @@ Starting {start_time}
                   + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
         return header
 
-    def _get_calc_setup(backend, hamiltonian, charge, multiplicity):
+    def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
+                        basis, etol, gtol):
         data = [['Hamiltonian', hamiltonian],
+                ['Basis', basis],
                 ['Charge', charge],
-                ['Multiplicity', multiplicity]]
+                ['Multiplicity', multiplicity],
+                ['Convergencetest energy', etol],
+                ['Convergencetest gradient', gtol]
+                ]
         return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
     calculation_setup = _get_calc_setup(backend, hamiltonian, charge,
-                                        multiplicity)
+                                        multiplicity, basis, etol, gtol)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),

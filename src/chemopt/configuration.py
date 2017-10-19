@@ -25,6 +25,8 @@ fixed_defaults['calculation_type'] = 'Single Point'
 fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
+fixed_defaults['etol'] = 1e-7
+fixed_defaults['gtol'] = 1e-5
 
 
 def _give_default_file_path():
@@ -160,4 +162,8 @@ docstring['title'] = "The title to be printed in input and output.\n"
 docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
 with the molpro \
 `notation <https://www.molpro.net/info/2015.1/doc/manual/node36.html>`_.\n"
+
+docstring['etol'] = "Convergence criterium for the energy."
+
+docstring['gtol'] = "Convergence criterium for the gradient."
 substitute_docstr = Substitution(**docstring)
