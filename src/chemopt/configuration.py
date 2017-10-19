@@ -25,8 +25,6 @@ fixed_defaults['calculation_type'] = 'Single Point'
 fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
-fixed_defaults['etol'] = 1e-7
-fixed_defaults['gtol'] = 1e-5
 
 
 def _give_default_file_path():
@@ -39,6 +37,9 @@ def provide_defaults():
     settings = {}
     settings['defaults'] = {}
     settings['defaults']['backend'] = 'molpro'
+    settings['defaults']['num_procs'] = 1
+    settings['defaults']['num_threads'] = 1
+    settings['defaults']['mem_per_proc'] = '150Mb'
     settings['defaults']['molpro_exe'] = 'molpro'
     return settings
 
@@ -103,6 +104,9 @@ def read_configuration_file(settings, filepath=_give_default_file_path()):
         def getfloat(section, key, config):  # pylint:disable=unused-variable
             return config[section].getfloat(key)
         special_actions = {}  # Something different than a string is expected
+        special_actions['defaults'] = {}
+        special_actions['defaults']['num_procs'] = getinteger
+        special_actions['defaults']['num_threads'] = getinteger
         try:
             return special_actions[section][key](section, key, config)
         except KeyError:
@@ -163,7 +167,15 @@ docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
 with the molpro \
 `notation <https://www.molpro.net/info/2015.1/doc/manual/node36.html>`_.\n"
 
-docstring['etol'] = "Convergence criterium for the energy."
 
-docstring['gtol'] = "Convergence criterium for the gradient."
+docstring['num_procs'] = "The number of processes to spawn."
+
+docstring['num_threads'] = "Currently not Implemented"
+
+docstring['mem_per_proc'] = "Memory per process. \
+This is a string with a number and a unit like '800 Mb. \
+SI and binary prefixes are supported. \
+Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
+for parsing."
+
 substitute_docstr = Substitution(**docstring)
