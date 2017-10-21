@@ -20,6 +20,7 @@ def optimise(zmolecule, hamiltonian, basis,
              md_out=None, el_calc_input=None, molden_out=None,
              etol=fixed_defaults['etol'],
              gtol=fixed_defaults['gtol'],
+             max_iter=fixed_defaults['max_iter'],
              backend=conf_defaults['backend'],
              charge=fixed_defaults['charge'],
              title=fixed_defaults['title'],
@@ -41,6 +42,7 @@ def optimise(zmolecule, hamiltonian, basis,
         multiplicity (int): {multiplicity}
         etol (float): {etol}
         gtol (float): {gtol}
+        max_iter (int): {gtol}
         num_procs (int): {num_procs}
         mem_per_proc (str): {mem_per_proc}
 
@@ -88,7 +90,7 @@ def optimise(zmolecule, hamiltonian, basis,
                             hamiltonian=hamiltonian, basis=basis,
                             charge=charge, title=title,
                             multiplicity=multiplicity,
-                            etol=etol, gtol=gtol,
+                            etol=etol, gtol=gtol, max_iter=max_iter,
                             num_procs=num_procs,
                             mem_per_proc=mem_per_proc, **kwargs)
         with open(md_out, 'w') as f:
@@ -128,7 +130,7 @@ def _get_C_rad(zmolecule):
 def _get_V_function(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, num_procs, mem_per_proc, **kwargs):
+        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
@@ -146,9 +148,6 @@ def _get_V_function(
 
             energy, grad_energy_X = result['energy'], result['gradient']
 
-            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
-                raise ConvergenceFinished(True)
-
             grad_X = zmolecule.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
             grad_energy_C = np.sum(
@@ -163,6 +162,11 @@ def _get_V_function(
                                'zmolecule': zmolecule})
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_X))
+
+            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
+                raise ConvergenceFinished(True)
+            elif len(calculated) >= max_iter:
+                raise ConvergenceFinished(False)
 
             return energy, grad_energy_C.flatten()
         else:
