@@ -195,7 +195,7 @@ def _get_zm_from_C_generator(zmolecule):
 
 
 def _get_generic_header(zmolecule, backend, hamiltonian, basis, charge, title,
-                        multiplicity, etol, gtol, start_time,
+                        multiplicity, etol, gtol, max_iter, start_time,
                         num_procs, mem_per_proc):
     if backend is None:
         backend = conf_defaults['backend']
@@ -220,8 +220,10 @@ Starting {start_time}
 {table_header}
 """.format
     calculation_setup = _get_calc_setup(
-        backend, hamiltonian, charge, multiplicity, basis,
-        etol, gtol, num_procs, mem_per_proc)
+        backend=backend, hamiltonian=hamiltonian, charge=charge,
+        multiplicity=multiplicity, basis=basis,
+        etol=etol, gtol=gtol, max_iter=max_iter,
+        num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
@@ -280,7 +282,7 @@ def _get_table_header():
 
 
 def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
-                    basis, etol, gtol, num_procs, mem_per_proc):
+                    basis, etol, gtol, num_procs, mem_per_proc, max_iter):
     data = [['Hamiltonian', hamiltonian],
             ['Basis', basis],
             ['Charge', charge],
