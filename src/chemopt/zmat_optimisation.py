@@ -104,8 +104,8 @@ def optimise(zmolecule, hamiltonian, basis,
 
         try:
             minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
-        except ConvergenceFinished:
-            pass
+        except ConvergenceFinished as e:
+            convergence = e
         calculated = V(get_calculated=True)
     else:
         pass
@@ -114,9 +114,9 @@ def optimise(zmolecule, hamiltonian, basis,
         [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
     t2 = datetime.now()
     with open(md_out, 'a') as f:
-        footer = _get_footer(opt_zmat=calculated[-1]['zmolecule'],
-                             start_time=t1, end_time=t2,
-                             molden_out=molden_out)
+        footer = _get_footer(
+            opt_zmat=calculated[-1]['zmolecule'], start_time=t1, end_time=t2,
+            molden_out=molden_out, successful=convergence.successful)
         f.write(footer)
     return calculated
 
@@ -284,7 +284,7 @@ def rename_existing(filepath):
         os.rename(to_be_moved, get_path(1))
 
 
-def _get_footer(opt_zmat, start_time, end_time, molden_out):
+def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
     get_output = """\
 
 ## Optimised Structures
@@ -301,14 +301,15 @@ def _get_footer(opt_zmat, start_time, end_time, molden_out):
 
 Structures were written to {molden}.
 
-The calculation finished successfully at: {end_time}
+The calculation finished {successfully} at: {end_time}
 and needed: {delta_time}.
 """.format
-    output = get_output(zmat=_get_markdown(opt_zmat),
-                        cartesian=_get_markdown(opt_zmat.get_cartesian()),
-                        molden=molden_out,
-                        end_time=_get_isostr(end_time),
-                        delta_time=str(end_time - start_time).split('.')[0])
+    output = get_output(
+        zmat=_get_markdown(opt_zmat),
+        cartesian=_get_markdown(opt_zmat.get_cartesian()),
+        molden=molden_out, end_time=_get_isostr(end_time),
+        successfully='successfully' if successful else 'with errors',
+        delta_time=str(end_time - start_time).split('.')[0])
     return output
 
 
