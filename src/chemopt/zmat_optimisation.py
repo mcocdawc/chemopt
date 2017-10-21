@@ -56,32 +56,15 @@ def optimise(zmolecule, hamiltonian, basis,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    if __name__ == '__main__':
-        if md_out is None:
-            raise ValueError('md_out has to be provided when executing '
-                             'from an interactive session.')
-        if molden_out is None:
-            raise ValueError('molden_out has to be provided when executing '
-                             'from an interactive session.')
-        if el_calc_input is None:
-            raise ValueError('el_calc_input has to be provided when executing '
-                             'from an interactive session.')
-    else:
-        base = splitext(basename(inspect.stack()[-1][1]))[0]
-        if md_out is None:
-            md_out = '{}.md'.format(base)
-        if molden_out is None:
-            molden_out = '{}.molden'.format(base)
-        if el_calc_input is None:
-            el_calc_input = os.path.join('{}_el_calcs'.format(base),
-                                         '{}.inp'.format(base))
+    files = _get_defaults(md_out, molden_out, el_calc_input)
+    for filepath in files:
+        rename_existing(filepath)
+    md_out, molden_out, el_calc_input = files
+
     if num_procs is None:
         num_procs = conf_defaults['num_procs']
     if mem_per_proc is None:
         mem_per_proc = conf_defaults['mem_per_proc']
-
-    for filepath in [md_out, molden_out, el_calc_input]:
-        rename_existing(filepath)
 
     t1 = datetime.now()
     if symbols is None:
@@ -338,3 +321,26 @@ def is_converged(calculated, grad_energy_X, etol=fixed_defaults['etol'],
     else:
         return (abs(energies[-1] - energies[-2]) < etol and
                 abs(grad_energy_X).max() < gtol)
+
+
+def _get_defaults(md_out, molden_out, el_calc_input):
+    if __name__ == '__main__':
+        if md_out is None:
+            raise ValueError('md_out has to be provided when executing '
+                             'from an interactive session.')
+        if molden_out is None:
+            raise ValueError('molden_out has to be provided when executing '
+                             'from an interactive session.')
+        if el_calc_input is None:
+            raise ValueError('el_calc_input has to be provided when executing '
+                             'from an interactive session.')
+    else:
+        base = splitext(basename(inspect.stack()[-1][1]))[0]
+        if md_out is None:
+            md_out = '{}.md'.format(base)
+        if molden_out is None:
+            molden_out = '{}.molden'.format(base)
+        if el_calc_input is None:
+            el_calc_input = os.path.join('{}_el_calcs'.format(base),
+                                         '{}.inp'.format(base))
+        return md_out, molden_out, el_calc_input
