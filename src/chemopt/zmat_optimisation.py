@@ -273,15 +273,13 @@ def rename_existing(filepath):
     if os.path.exists(filepath):
         to_be_moved = normpath(filepath).split(os.path.sep)[0]
         get_path = (to_be_moved + '_{}').format
-        found = False
-        end = 1
+        found, end = False, 1
         while not found:
             if not os.path.exists(get_path(end)):
                 found = True
-            end += 1
-        for i in range(end - 1, 1, -1):
-            os.rename(get_path(i - 1), get_path(i))
-        os.rename(to_be_moved, get_path(1))
+                os.rename(to_be_moved, get_path(end))
+            else:
+                end += 1
 
 
 def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
