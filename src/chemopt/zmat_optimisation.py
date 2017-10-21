@@ -202,6 +202,10 @@ def _get_generic_header(zmolecule, backend, hamiltonian, basis, charge, title,
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
+## Settings for the calculations
+
+{calculation_setup}
+
 ## Starting structures
 ### Starting structure as Zmatrix
 
@@ -210,9 +214,6 @@ def _get_generic_header(zmolecule, backend, hamiltonian, basis, charge, title,
 ### Starting structure in cartesian coordinates
 
 {cartesian}
-
-## Setup for the electronic calculations
-{electronic_calculation_setup}
 
 ## Iterations
 Starting {start_time}
@@ -228,7 +229,7 @@ Starting {start_time}
     header = get_header(
         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
         cartesian=_get_markdown(zmolecule.get_cartesian()),
-        electronic_calculation_setup=calculation_setup,
+        calculation_setup=calculation_setup,
         start_time=start_time,
         table_header=_get_table_header())
     return header
