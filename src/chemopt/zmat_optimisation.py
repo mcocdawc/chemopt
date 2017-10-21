@@ -10,6 +10,7 @@ from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.interface.generic import calculate
+from chemopt.exception import ConvergenceFinished
 from tabulate import tabulate
 
 
@@ -101,7 +102,7 @@ def optimise(zmolecule, hamiltonian, basis,
 
         try:
             minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
-        except StopIteration:
+        except ConvergenceFinished:
             pass
         calculated = V(get_calculated=True)
     else:
@@ -146,7 +147,7 @@ def _get_V_function(
             energy, grad_energy_X = result['energy'], result['gradient']
 
             if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
-                raise StopIteration
+                raise ConvergenceFinished(True)
 
             grad_X = zmolecule.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
