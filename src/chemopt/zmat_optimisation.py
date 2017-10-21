@@ -42,7 +42,7 @@ def optimise(zmolecule, hamiltonian, basis,
         multiplicity (int): {multiplicity}
         etol (float): {etol}
         gtol (float): {gtol}
-        max_iter (int): {gtol}
+        max_iter (int): {max_iter}
         num_procs (int): {num_procs}
         mem_per_proc (str): {mem_per_proc}
 

@@ -185,6 +185,8 @@ docstring['etol'] = "Convergence criterium for the energy."
 
 docstring['gtol'] = "Convergence criterium for the gradient."
 
+docstring['max_iter'] = "Maximum number of iterations."
+
 docstring['num_procs'] = "The number of processes to spawn."
 
 docstring['num_threads'] = "Currently not Implemented"
