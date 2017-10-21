@@ -68,30 +68,47 @@ def optimise(zmolecule, hamiltonian, basis,
 
     t1 = datetime.now()
     if symbols is None:
-        V = _get_V_function(zmolecule=zmolecule, el_calc_input=el_calc_input,
-                            md_out=md_out, backend=backend,
-                            hamiltonian=hamiltonian, basis=basis,
-                            charge=charge, title=title,
-                            multiplicity=multiplicity,
-                            etol=etol, gtol=gtol, max_iter=max_iter,
-                            num_procs=num_procs,
-                            mem_per_proc=mem_per_proc, **kwargs)
+        V = _get_generic_opt_V(
+            zmolecule=zmolecule, el_calc_input=el_calc_input,
+            md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
         with open(md_out, 'w') as f:
-            header = _get_header(
+            header = _get_generic_header(
                 zmolecule=zmolecule, backend=backend, hamiltonian=hamiltonian,
                 basis=basis, charge=charge, multiplicity=multiplicity,
-                num_procs=num_procs,
+                num_procs=num_procs, mem_per_proc=mem_per_proc,
                 start_time=t1, title=title,
-                mem_per_proc=mem_per_proc, etol=etol, gtol=gtol)
+                etol=etol, gtol=gtol, max_iter=max_iter)
             f.write(header)
-
         try:
             minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
         except ConvergenceFinished as e:
             convergence = e
         calculated = V(get_calculated=True)
     else:
-        pass
+        # V = _get_symb_opt_V(
+        #     zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
+        #     md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+        #     basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+        #     etol=etol, gtol=gtol, max_iter=max_iter,
+        #     num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+        # with open(md_out, 'w') as f:
+        #     header = _get_symb_header(
+        #         zmolecule=zmolecule, symbols=symbols, backend=backend,
+        #         hamiltonian=hamiltonian,
+        #         basis=basis, charge=charge, multiplicity=multiplicity,
+        #         num_procs=num_procs, mem_per_proc=mem_per_proc,
+        #         start_time=t1, title=title,
+        #         etol=etol, gtol=gtol, max_iter=max_iter)
+        #     f.write(header)
+
+        try:
+            minimize(V, x0=[x[1] for x in symbols], jac=True, method='BFGS')
+        except ConvergenceFinished as e:
+            convergence = e
+        calculated = V(get_calculated=True)
 
     to_molden(
         [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
@@ -110,7 +127,7 @@ def _get_C_rad(zmolecule):
     return C_rad.flatten(order='F')
 
 
-def _get_V_function(
+def _get_generic_opt_V(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
@@ -177,14 +194,15 @@ def _get_zm_from_C_generator(zmolecule):
     return get_zm_from_C
 
 
-def _get_header(zmolecule, backend, hamiltonian, basis, charge, title,
-                multiplicity, etol, gtol, start_time, num_procs, mem_per_proc):
+def _get_generic_header(zmolecule, backend, hamiltonian, basis, charge, title,
+                        multiplicity, etol, gtol, start_time,
+                        num_procs, mem_per_proc):
     if backend is None:
         backend = conf_defaults['backend']
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
-## Starting Structures
+## Starting structures
 ### Starting structure as Zmatrix
 
 {zmat}
@@ -201,27 +219,6 @@ Starting {start_time}
 
 {table_header}
 """.format
-
-    def _get_table_header():
-        get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
-        header = (get_row('n', 'energy [Hartree]',
-                          'delta [Hartree]', 'grad_X_max [Hartree / Angstrom]')
-                  + '\n'
-                  + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
-        return header
-
-    def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
-                        basis, etol, gtol, num_procs, mem_per_proc):
-        data = [['Hamiltonian', hamiltonian],
-                ['Basis', basis],
-                ['Charge', charge],
-                ['Spin multiplicity', multiplicity],
-                ['Convergence energy', etol],
-                ['Convergence gradient', gtol],
-                ['Number of processes', num_procs],
-                ['Memory per process', mem_per_proc]
-                ]
-        return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
     calculation_setup = _get_calc_setup(
         backend, hamiltonian, charge, multiplicity, basis,
         etol, gtol, num_procs, mem_per_proc)
@@ -233,6 +230,68 @@ Starting {start_time}
         start_time=start_time,
         table_header=_get_table_header())
     return header
+
+
+# def _get_symb_header(zmolecule, backend, hamiltonian, basis, charge, title,
+#                      multiplicity, etol, gtol, start_time,
+#                      num_procs, mem_per_proc):
+#     if backend is None:
+#         backend = conf_defaults['backend']
+#     get_header = """\
+# # This is ChemOpt {version} optimising a molecule in internal coordinates.
+#
+# ## Starting structures
+# ### Starting structure as Zmatrix
+#
+# {zmat}
+#
+# ### Starting structure in cartesian coordinates
+#
+# {cartesian}
+#
+# ## Setup for the electronic calculations
+# {electronic_calculation_setup}
+#
+# ## Iterations
+# Starting {start_time}
+#
+# {table_header}
+# """.format
+#     calculation_setup = _get_calc_setup(
+#         backend, hamiltonian, charge, multiplicity, basis,
+#         etol, gtol, num_procs, mem_per_proc)
+#
+#     header = get_header(
+#         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
+#         cartesian=_get_markdown(zmolecule.get_cartesian()),
+#         electronic_calculation_setup=calculation_setup,
+#         start_time=start_time,
+#         table_header=_get_table_header())
+#     return header
+
+
+def _get_table_header():
+    get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
+    header = (get_row('n', 'energy [Hartree]',
+                      'delta [Hartree]', 'grad_X_max [Hartree / Angstrom]')
+              + '\n'
+              + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
+    return header
+
+
+def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
+                    basis, etol, gtol, num_procs, mem_per_proc):
+    data = [['Hamiltonian', hamiltonian],
+            ['Basis', basis],
+            ['Charge', charge],
+            ['Spin multiplicity', multiplicity],
+            ['Convergence energy', etol],
+            ['Convergence gradient', gtol],
+            ['Maximum of iterations', max_iter],
+            ['Number of processes', num_procs],
+            ['Memory per process', mem_per_proc]
+            ]
+    return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
 def _get_markdown(molecule):
