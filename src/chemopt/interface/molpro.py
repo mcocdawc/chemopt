@@ -51,15 +51,15 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     """
     if molpro_exe is None:
         molpro_exe = conf_defaults['molpro_exe']
+    if num_procs is None:
+        num_procs = conf_defaults['num_procs']
+    if mem_per_proc is None:
+        mem_per_proc = conf_defaults['mem_per_proc']
     if __name__ == '__main__' and el_calc_input is None:
         raise ValueError('el_calc_input has to be provided when executing '
                          'from an interactive session.')
     if el_calc_input is None:
         el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
-    if num_procs is None:
-        num_procs = conf_defaults['num_procs']
-    if mem_per_proc is None:
-        mem_per_proc = conf_defaults['mem_per_proc']
 
     input_str = generate_input_file(
         molecule=molecule,
@@ -70,7 +70,9 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
 
     input_path = el_calc_input
     output_path = '{}.out'.format(splitext(input_path)[0])
-    os.makedirs(os.path.dirname(input_path), exist_ok=True)
+    dirname = os.path.dirname(input_path)
+    if dirname != '':
+        os.makedirs(dirname, exist_ok=True)
     with open(input_path, 'w') as f:
         f.write(input_str)
 
@@ -211,7 +213,7 @@ def _get_basis_str(basis):
     elif basis == 'AUG-cc-pVTZ':
         basis_str = 'avtz'
     else:
-        raise Exception('Unhandled basis type: {}'.format(basis))
+        raise ValueError('Unhandled basis type: {}'.format(basis))
     return basis_str
 
 
@@ -232,7 +234,7 @@ def _get_hamiltonian_str(hamiltonian, num_e, wfn_symmetry, multiplicity):
         elif hamiltonian == 'B3LYP':
             hamiltonian_key = 'uks, b3lyp'
         else:
-            raise Exception('Unhandled hamiltonian: {}'.format(hamiltonian))
+            raise ValueError('Unhandled hamiltonian: {}'.format(hamiltonian))
         hamiltonian_str += '{{{}\n{}}}'.format(hamiltonian_key, wfn)
     return hamiltonian_str
 
@@ -246,7 +248,7 @@ def _get_calculation_type(calculation_type):
     elif calculation_type == 'Frequencies':
         calc_str = '{optg}\n{frequencies}'
     else:
-        raise Exception('Unhandled calculation type: %s' % calculation_type)
+        raise ValueError('Unhandled calculation type: %s' % calculation_type)
     return calc_str
 
 

@@ -49,7 +49,7 @@ def optimise(zmolecule, hamiltonian, basis,
 
     Returns:
         list: A list of dictionaries. Each dictionary has three keys:
-        ``['energy', 'grad_energy', 'zmolecule']``.
+        ``['energy', 'grad_energy', 'structure']``.
         The energy is given in Hartree
         The energy gradient ('grad_energy') is given in internal coordinates.
         The units are Hartree / Angstrom for bonds and
@@ -112,11 +112,11 @@ def optimise(zmolecule, hamiltonian, basis,
         calculated = V(get_calculated=True)
 
     to_molden(
-        [x['zmolecule'].get_cartesian() for x in calculated], buf=molden_out)
+        [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
     t2 = datetime.now()
     with open(md_out, 'a') as f:
         footer = _get_footer(
-            opt_zmat=calculated[-1]['zmolecule'], start_time=t1, end_time=t2,
+            opt_zmat=calculated[-1]['structure'], start_time=t1, end_time=t2,
             molden_out=molden_out, successful=convergence.successful)
         f.write(footer)
     return calculated
@@ -134,12 +134,13 @@ def _get_generic_opt_V(
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     get_new_zmat = partial(get_zm_from_C, index_to_change=zmolecule.index)
 
-    def V(C_rad=None, calculated=[], get_calculated=False):
+    def V(C_rad=None, get_calculated=False,
+          calculated=[]):  # pylint:disable=dangerous-default-value
         if get_calculated:
             return calculated
         elif C_rad is not None:
             try:
-                previous_zmat = calculated[-1]['zmolecule'].copy()
+                previous_zmat = calculated[-1]['structure'].copy()
             except IndexError:
                 new_zmat = zmolecule.copy()
             else:
@@ -154,18 +155,18 @@ def _get_generic_opt_V(
 
             energy, grad_energy_X = result['energy'], result['gradient']
 
-            grad_X = new_zmat.get_grad_cartesian(
-                as_function=False, drop_auto_dummies=True)
-            grad_energy_C = np.sum(
-                grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
+            grad_X = new_zmat.get_grad_cartesian(as_function=False,
+                                                 drop_auto_dummies=True)
+            grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
+                                   * grad_X, axis=(0, 1))
 
             for i in range(min(3, grad_energy_C.shape[0])):
-                grad_energy_C[i, i:] = 0
+                grad_energy_C[i, i:] = 0.
 
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['grad_energy'] = grad_energy_C
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
-                               'zmolecule': new_zmat})
+                               'structure': new_zmat})
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_X))
 
