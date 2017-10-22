@@ -7,6 +7,7 @@ import numpy as np
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 
+from chemopt import __version__
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.exception import ConvergenceFinished
@@ -209,7 +210,7 @@ Starting {start_time}
         num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
     header = get_header(
-        version='0.1.0', title=title, zmat=_get_markdown_structure(zmolecule),
+        version=__version__, zmat=_get_markdown_structure(zmolecule),
         cartesian=_get_markdown_structure(zmolecule.get_cartesian()),
         calculation_setup=settings_table,
         start_time=start_time,
