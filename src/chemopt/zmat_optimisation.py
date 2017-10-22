@@ -281,8 +281,8 @@ def _get_markdown(molecule):
 
 def _get_table_header():
     get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
-    header = (get_row('n', r'$E$ [E_h]', r'\Delta E [E_h]',
-                      r'$\max(|\nabla_X E |) [E_h$ / Å]')
+    header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
+                      r'$\max(|\nabla_X E |) [E_h$/Å]')
               + '\n'
               + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
     return header
