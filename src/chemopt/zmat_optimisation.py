@@ -213,7 +213,7 @@ Starting {start_time}
         version=__version__, zmat=_get_markdown_structure(zmolecule),
         cartesian=_get_markdown_structure(zmolecule.get_cartesian()),
         calculation_setup=settings_table,
-        start_time=start_time,
+        start_time=_get_time_isostr(start_time),
         table_header=_get_table_header())
     return header
 
