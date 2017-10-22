@@ -1,17 +1,16 @@
 import inspect
 import os
-from functools import partial
 from datetime import datetime
 from os.path import basename, normpath, splitext
 
 import numpy as np
+from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 
-from chemcoord.xyz_functions import to_molden
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
-from chemopt.interface.generic import calculate
 from chemopt.exception import ConvergenceFinished
+from chemopt.interface.generic import calculate
 from tabulate import tabulate
 
 
@@ -57,7 +56,7 @@ def optimise(zmolecule, hamiltonian, basis,
         The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
         contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
     """
-    files = _get_defaults(md_out, molden_out, el_calc_input)
+    files = _get_default_filepaths(md_out, molden_out, el_calc_input)
     for filepath in files:
         rename_existing(filepath)
     md_out, molden_out, el_calc_input = files
@@ -123,7 +122,13 @@ def _get_generic_opt_V(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
-    get_new_zmat = partial(get_zm_from_C, index_to_change=zmolecule.index)
+    def get_new_zmat(C_rad, previous_zmat):
+        C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+
+        new_zm = previous_zmat.copy()
+        new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
+        return new_zm
 
     def V(C_rad=None, get_calculated=False,
           calculated=[]):  # pylint:disable=dangerous-default-value
@@ -171,15 +176,6 @@ def _get_generic_opt_V(
     return V
 
 
-def get_zm_from_C(C_rad, previous_zmat, index_to_change):
-    C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
-    C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
-
-    new_zm = previous_zmat.copy()
-    new_zm.safe_loc[index_to_change, ['bond', 'angle', 'dihedral']] = C_deg
-    return new_zm
-
-
 def _get_generic_optimise_header(
         zmolecule, backend, hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, start_time, num_procs, mem_per_proc):
@@ -206,16 +202,16 @@ Starting {start_time}
 
 {table_header}
 """.format
-    calculation_setup = _get_calc_setup(
+    settings_table = _get_settings_table(
         backend=backend, hamiltonian=hamiltonian, charge=charge,
         multiplicity=multiplicity, basis=basis,
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
     header = get_header(
-        version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
-        cartesian=_get_markdown(zmolecule.get_cartesian()),
-        calculation_setup=calculation_setup,
+        version='0.1.0', title=title, zmat=_get_markdown_structure(zmolecule),
+        cartesian=_get_markdown_structure(zmolecule.get_cartesian()),
+        calculation_setup=settings_table,
         start_time=start_time,
         table_header=_get_table_header())
     return header
@@ -259,8 +255,8 @@ Starting {start_time}
 #     return header
 
 
-def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
-                    basis, etol, gtol, num_procs, mem_per_proc, max_iter):
+def _get_settings_table(backend, hamiltonian, charge, multiplicity,
+                        basis, etol, gtol, num_procs, mem_per_proc, max_iter):
     data = [['Hamiltonian', hamiltonian],
             ['Basis', basis],
             ['Charge', charge],
@@ -274,9 +270,8 @@ def _get_calc_setup(backend, hamiltonian, charge, multiplicity,
     return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
-def _get_markdown(molecule):
-    data = molecule._frame
-    return tabulate(data, tablefmt='pipe', headers=data.columns)
+def _get_markdown_structure(molecule):
+    return tabulate(molecule._frame, tablefmt='pipe', headers=molecule.columns)
 
 
 def _get_table_header():
@@ -295,22 +290,10 @@ def _get_table_row(calculated, grad_energy_X):
         delta = 0.
     else:
         delta = calculated[-1]['energy'] - calculated[-2]['energy']
-    grad_energy_X_max = abs(grad_energy_X).max()
+    # table header was:
+    # n, energy, Delta energy, max(abs(grad_energy_X))
     get_str = '|{:>4}| {:+16.10f} | {:+16.10f} | {:+30.10f} |\n'.format
-    return get_str(n, energy, delta, grad_energy_X_max)
-
-
-def rename_existing(filepath):
-    if os.path.exists(filepath):
-        to_be_moved = normpath(filepath).split(os.path.sep)[0]
-        get_path = (to_be_moved + '_{}').format
-        found, end = False, 1
-        while not found:
-            if not os.path.exists(get_path(end)):
-                found = True
-                os.rename(to_be_moved, get_path(end))
-            else:
-                end += 1
+    return get_str(n, energy, delta, abs(grad_energy_X).max())
 
 
 def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
@@ -334,16 +317,29 @@ The calculation finished {successfully} at: {end_time}
 and needed: {delta_time}.
 """.format
     output = get_output(
-        zmat=_get_markdown(opt_zmat),
-        cartesian=_get_markdown(opt_zmat.get_cartesian()),
-        molden=molden_out, end_time=_get_isostr(end_time),
+        zmat=_get_markdown_structure(opt_zmat),
+        cartesian=_get_markdown_structure(opt_zmat.get_cartesian()),
+        molden=molden_out, end_time=_get_time_isostr(end_time),
         successfully='successfully' if successful else 'with errors',
         delta_time=str(end_time - start_time).split('.')[0])
     return output
 
 
-def _get_isostr(time):
+def _get_time_isostr(time):
     return time.replace(microsecond=0).isoformat()
+
+
+def rename_existing(filepath):
+    if os.path.exists(filepath):
+        to_be_moved = normpath(filepath).split(os.path.sep)[0]
+        get_path = (to_be_moved + '_{}').format
+        found, end = False, 1
+        while not found:
+            if not os.path.exists(get_path(end)):
+                found = True
+                os.rename(to_be_moved, get_path(end))
+            else:
+                end += 1
 
 
 @substitute_docstr
@@ -370,7 +366,7 @@ def is_converged(calculated, grad_energy_X, etol=fixed_defaults['etol'],
         return abs(delta_energy) < etol and abs(grad_energy_X).max() < gtol
 
 
-def _get_defaults(md_out: str, molden_out: str, el_calc_input: str) -> str:
+def _get_default_filepaths(md_out, molden_out, el_calc_input):
     if __name__ == '__main__':
         if md_out is None:
             raise ValueError('md_out has to be provided when executing '
