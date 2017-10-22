@@ -343,8 +343,8 @@ def rename_existing(filepath):
 
 
 @substitute_docstr
-def is_converged(calculated, grad_energy_X, etol=fixed_defaults['etol'],
-                 gtol=fixed_defaults['gtol']):
+def is_converged(calculated, grad_energy_X,
+                 etol=fixed_defaults['etol'], gtol=fixed_defaults['gtol']):
     """Returns if an optimization is converged.
 
     Args:
