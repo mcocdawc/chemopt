@@ -290,7 +290,6 @@ Starting {start_time}
 
     header = get_header(
         version=__version__, zmat=_get_geometry_markdown(zmolecule),
-        cartesian=_get_geometry_markdown(zmolecule.get_cartesian()),
         calculation_setup=settings_table, symbols=_get_symbol_table(symbols),
         start_time=_get_time_isostr(start_time),
         table_header=_get_table_header())
