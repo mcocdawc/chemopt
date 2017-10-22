@@ -1,5 +1,6 @@
 import inspect
 import os
+from functools import partial
 from datetime import datetime
 from os.path import basename, normpath, splitext
 
@@ -131,8 +132,7 @@ def _get_generic_opt_V(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
-    get_zm_from_C = _get_zm_from_C_generator(zmolecule)
-    index_to_change = zmolecule.index
+    get_zm_from_C = partial(get_zm_from_C, index_to_change=zmolecule.index)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
@@ -143,7 +143,7 @@ def _get_generic_opt_V(
             except IndexError:
                 new_zmat = zmolecule.copy()
             else:
-                new_zmat = get_zm_from_C_new(C_rad, previous_zmat, index_to_change)
+                new_zmat = get_zm_from_C(C_rad, previous_zmat)
 
             result = calculate(
                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
@@ -180,7 +180,7 @@ def _get_generic_opt_V(
     return V
 
 
-def get_zm_from_C_new(C_rad, previous_zmat, index_to_change):
+def get_zm_from_C(C_rad, previous_zmat, index_to_change):
     C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
     C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
@@ -189,24 +189,24 @@ def get_zm_from_C_new(C_rad, previous_zmat, index_to_change):
     return new_zm
 
 
-def _get_zm_from_C_generator(zmolecule):
-    def get_zm_from_C(
-            C_rad=None, previous_zmats=[zmolecule],
-            get_previous=False):  # pylint:disable=dangerous-default-value
-        if get_previous:
-            return previous_zmats
-        elif C_rad is not None:
-            C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
-            C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
-
-            new_zm = previous_zmats.pop().copy()
-            zmat_values = ['bond', 'angle', 'dihedral']
-            new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
-            previous_zmats.append(new_zm)
-            return new_zm
-        else:
-            raise ValueError
-    return get_zm_from_C
+# def _get_zm_from_C_generator(zmolecule):
+#     def get_zm_from_C(
+#             C_rad=None, previous_zmats=[zmolecule],
+#             get_previous=False):  # pylint:disable=dangerous-default-value
+#         if get_previous:
+#             return previous_zmats
+#         elif C_rad is not None:
+#             C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+#             C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+#
+#             new_zm = previous_zmats.pop().copy()
+#             zmat_values = ['bond', 'angle', 'dihedral']
+#             new_zm.safe_loc[zmolecule.index, zmat_values] = C_deg
+#             previous_zmats.append(new_zm)
+#             return new_zm
+#         else:
+#             raise ValueError
+#     return get_zm_from_C
 
 
 def _get_generic_header(zmolecule, backend, hamiltonian, basis, charge, title,
