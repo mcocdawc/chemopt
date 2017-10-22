@@ -132,7 +132,7 @@ def _get_generic_opt_V(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
-    get_zm_from_C = partial(get_zm_from_C, index_to_change=zmolecule.index)
+    get_zm_from_C = partial(get_zm_from_C2, index_to_change=zmolecule.index)
 
     def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
@@ -180,7 +180,7 @@ def _get_generic_opt_V(
     return V
 
 
-def get_zm_from_C(C_rad, previous_zmat, index_to_change):
+def get_zm_from_C2(C_rad, previous_zmat, index_to_change):
     C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
     C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
 
