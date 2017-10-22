@@ -26,7 +26,7 @@ fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
 fixed_defaults['etol'] = 1e-7
-fixed_defaults['gtol'] = 1e-5
+fixed_defaults['gtol'] = 5e-4
 fixed_defaults['max_iter'] = 100
 
 
