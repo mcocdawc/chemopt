@@ -276,12 +276,12 @@ def _get_markdown_structure(molecule):
 
 
 def _get_table_header():
-    get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^30.30} |'.format
+    get_row = '|{:>4.4}|{:^16.16}|{:^16.16}|{:^30.30}|'.format
     header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
                       r'$\max(|\nabla_X E |) [E_h$/Å]')
               + '\n'
-              + get_row(4 * '-' + ':', 16 * '-' + ':',
-                        16 * '-' + ':', 30 * '-' + ':'))
+              + get_row(3 * '-' + ':', 15 * '-' + ':',
+                        15 * '-' + ':', 29 * '-' + ':'))
     return header
 
 
