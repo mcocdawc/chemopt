@@ -280,7 +280,8 @@ def _get_table_header():
     header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
                       r'$\max(|\nabla_X E |) [E_h$/Å]')
               + '\n'
-              + get_row(4 * '-', 16 * '-', 16 * '-', 28 * '-'))
+              + get_row(4 * '-' + ':', 16 * '-' + ':',
+                        16 * '-' + ':', 30 * '-' + ':'))
     return header
 
 
