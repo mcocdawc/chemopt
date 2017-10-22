@@ -137,10 +137,10 @@ def _get_generic_opt_V(
         if get_calculated:
             return calculated
         elif C_rad is not None:
-            zmolecule = get_zm_from_C(C_rad)
+            new_zmat = get_zm_from_C(C_rad)
 
             result = calculate(
-                molecule=zmolecule, forces=True, el_calc_input=el_calc_input,
+                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
                 backend=backend, hamiltonian=hamiltonian, basis=basis,
                 charge=charge, title=title,
                 multiplicity=multiplicity,
@@ -148,7 +148,7 @@ def _get_generic_opt_V(
 
             energy, grad_energy_X = result['energy'], result['gradient']
 
-            grad_X = zmolecule.get_grad_cartesian(
+            grad_X = new_zmat.get_grad_cartesian(
                 as_function=False, drop_auto_dummies=True)
             grad_energy_C = np.sum(
                 grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
@@ -156,10 +156,10 @@ def _get_generic_opt_V(
             for i in range(min(3, grad_energy_C.shape[0])):
                 grad_energy_C[i, i:] = 0
 
-            zmolecule.metadata['energy'] = energy
-            zmolecule.metadata['grad_energy'] = grad_energy_C
+            new_zmat.metadata['energy'] = energy
+            new_zmat.metadata['grad_energy'] = grad_energy_C
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
-                               'zmolecule': zmolecule})
+                               'zmolecule': new_zmat})
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_X))
 
@@ -172,6 +172,15 @@ def _get_generic_opt_V(
         else:
             raise ValueError
     return V
+
+
+def get_zm_from_C_new(C_rad, previous_zmat, index_to_change):
+    C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+    C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+
+    new_zm = previous_zmat.copy()
+    new_zm.safe_loc[index_to_change, ['bond', 'angle', 'dihedral']] = C_deg
+    return new_zm
 
 
 def _get_zm_from_C_generator(zmolecule):
