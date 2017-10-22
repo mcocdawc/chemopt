@@ -361,17 +361,16 @@ def is_converged(calculated, grad_energy_X, etol=fixed_defaults['etol'],
     Returns:
         bool:
     """
-    energies = [x['energy'] for x in calculated]
-    if len(energies) == 0:
+    if len(calculated) == 0:
         return False
-    elif len(energies) == 1:
+    elif len(calculated) == 1:
         return False
     else:
-        return (abs(energies[-1] - energies[-2]) < etol and
-                abs(grad_energy_X).max() < gtol)
+        delta_energy = calculated[-1]['energy'] - calculated[-2]['energy']
+        return abs(delta_energy) < etol and abs(grad_energy_X).max() < gtol
 
 
-def _get_defaults(md_out, molden_out, el_calc_input):
+def _get_defaults(md_out: str, molden_out: str, el_calc_input: str) -> str:
     if __name__ == '__main__':
         if md_out is None:
             raise ValueError('md_out has to be provided when executing '
