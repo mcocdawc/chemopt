@@ -294,7 +294,7 @@ def _get_table_row(calculated, grad_energy_X):
         delta = calculated[-1]['energy'] - calculated[-2]['energy']
     # table header was:
     # n, energy, Delta energy, max(abs(grad_energy_X))
-    get_str = '|{:>4}|{:+16.10f}|{:+16.10f}|{:+31.10f}|\n'.format
+    get_str = '|{:>4}|{:16.10f}|{:16.10f}|{:31.10f}|\n'.format
     return get_str(n, energy, delta, abs(grad_energy_X).max())
 
 
