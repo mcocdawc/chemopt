@@ -132,12 +132,18 @@ def _get_generic_opt_V(
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     get_zm_from_C = _get_zm_from_C_generator(zmolecule)
+    index_to_change = zmolecule.index
 
     def V(C_rad=None, calculated=[], get_calculated=False):
         if get_calculated:
             return calculated
         elif C_rad is not None:
-            new_zmat = get_zm_from_C(C_rad)
+            try:
+                previous_zmat = calculated[-1]['zmolecule'].copy()
+            except IndexError:
+                new_zmat = zmolecule.copy()
+            else:
+                new_zmat = get_zm_from_C_new(C_rad, previous_zmat, index_to_change)
 
             result = calculate(
                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
