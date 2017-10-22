@@ -6,6 +6,7 @@ from os.path import basename, normpath, splitext
 import numpy as np
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
+from sympy import latex
 
 from chemopt import __version__
 from chemopt.configuration import (conf_defaults, fixed_defaults,
@@ -84,7 +85,24 @@ def optimise(zmolecule, hamiltonian, basis,
             etol=etol, gtol=gtol, max_iter=max_iter,
             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     else:
-        pass
+        print('hello')
+        header = _get_symb_optimise_header(
+            zmolecule=zmolecule, symbols=symbols, backend=backend,
+            hamiltonian=hamiltonian, basis=basis, charge=charge,
+            multiplicity=multiplicity, num_procs=num_procs,
+            mem_per_proc=mem_per_proc, start_time=t1, title=title,
+            etol=etol, gtol=gtol, max_iter=max_iter)
+        print(header)
+        with open(md_out, 'w') as f:
+            f.write(header)
+        return 5
+        calculated, convergence = _zmat_symb_optimise(
+            zmolecule=zmolecule, el_calc_input=el_calc_input,
+            md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+    return 2
 
     to_molden(
         [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
@@ -117,6 +135,29 @@ def _zmat_generic_optimise(
         convergence = e
     calculated = V(get_calculated=True)
     return calculated, convergence
+
+
+def _zmat_symb_optimise(
+        zmolecule, el_calc_input, md_out, backend, hamiltonian, basis, charge,
+        title, multiplicity, etol, gtol, max_iter,
+        num_procs, mem_per_proc, **kwargs):
+    pass
+    # def _get_C_rad(zmolecule):
+    #     C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
+    #     C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
+    #     return C_rad.flatten(order='F')
+    # V = _get_generic_opt_V(
+    #     zmolecule=zmolecule, el_calc_input=el_calc_input,
+    #     md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+    #     basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+    #     etol=etol, gtol=gtol, max_iter=max_iter,
+    #     num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+    # try:
+    #     minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+    # except ConvergenceFinished as e:
+    #     convergence = e
+    # calculated = V(get_calculated=True)
+    # return calculated, convergence
 
 
 def _get_generic_opt_V(
@@ -180,8 +221,6 @@ def _get_generic_opt_V(
 def _get_generic_optimise_header(
         zmolecule, backend, hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, start_time, num_procs, mem_per_proc):
-    if backend is None:
-        backend = conf_defaults['backend']
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
@@ -210,50 +249,57 @@ Starting {start_time}
         num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
     header = get_header(
-        version=__version__, zmat=_get_markdown_structure(zmolecule),
-        cartesian=_get_markdown_structure(zmolecule.get_cartesian()),
+        version=__version__, zmat=_get_geometry_markdown(zmolecule),
+        cartesian=_get_geometry_markdown(zmolecule.get_cartesian()),
         calculation_setup=settings_table,
         start_time=_get_time_isostr(start_time),
         table_header=_get_table_header())
     return header
 
 
-# def _get_symb_header(zmolecule, backend, hamiltonian, basis, charge, title,
-#                      multiplicity, etol, gtol, start_time,
-#                      num_procs, mem_per_proc):
-#     if backend is None:
-#         backend = conf_defaults['backend']
-#     get_header = """\
-# # This is ChemOpt {version} optimising a molecule in internal coordinates.
-#
-# ## Starting structures
-# ### Starting structure as Zmatrix
-#
-# {zmat}
-#
-# ### Starting structure in cartesian coordinates
-#
-# {cartesian}
-#
-# ## Setup for the electronic calculations
-# {electronic_calculation_setup}
-#
-# ## Iterations
-# Starting {start_time}
-#
-# {table_header}
-# """.format
-#     calculation_setup = _get_calc_setup(
-#         backend, hamiltonian, charge, multiplicity, basis,
-#         etol, gtol, num_procs, mem_per_proc)
-#
-#     header = get_header(
-#         version='0.1.0', title=title, zmat=_get_markdown(zmolecule),
-#         cartesian=_get_markdown(zmolecule.get_cartesian()),
-#         electronic_calculation_setup=calculation_setup,
-#         start_time=start_time,
-#         table_header=_get_table_header())
-#     return header
+def _get_symb_optimise_header(
+        zmolecule, symbols, backend, hamiltonian, basis, charge, title,
+        multiplicity, etol, gtol, max_iter, start_time, num_procs,
+        mem_per_proc):
+    get_header = """\
+# This is ChemOpt {version} optimising a molecule in internal coordinates.
+
+## Settings for the calculations
+
+{calculation_setup}
+
+## Starting structures
+### Starting structure as Zmatrix
+
+{zmat}
+
+### Symbols with starting values
+
+{symbols}
+
+## Iterations
+Starting {start_time}
+
+{table_header}
+""".format
+    settings_table = _get_settings_table(
+        backend=backend, hamiltonian=hamiltonian, charge=charge,
+        multiplicity=multiplicity, basis=basis,
+        etol=etol, gtol=gtol, max_iter=max_iter,
+        num_procs=num_procs, mem_per_proc=mem_per_proc)
+
+    header = get_header(
+        version=__version__, zmat=_get_geometry_markdown(zmolecule),
+        cartesian=_get_geometry_markdown(zmolecule.get_cartesian()),
+        calculation_setup=settings_table, symbols=_get_symbol_table(symbols),
+        start_time=_get_time_isostr(start_time),
+        table_header=_get_table_header())
+    return header
+
+
+def _get_symbol_table(symbols):
+    return tabulate([(latex(sym_expr), v) for sym_expr, v in symbols],
+                    tablefmt='pipe', headers=['Symbol', 'Start value'])
 
 
 def _get_settings_table(backend, hamiltonian, charge, multiplicity,
@@ -271,7 +317,7 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
     return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
-def _get_markdown_structure(molecule):
+def _get_geometry_markdown(molecule):
     return tabulate(molecule._frame, tablefmt='pipe', headers=molecule.columns)
 
 
@@ -319,8 +365,8 @@ The calculation finished {successfully} at: {end_time}
 and needed: {delta_time}.
 """.format
     output = get_output(
-        zmat=_get_markdown_structure(opt_zmat),
-        cartesian=_get_markdown_structure(opt_zmat.get_cartesian()),
+        zmat=_get_geometry_markdown(opt_zmat),
+        cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
         molden=molden_out, end_time=_get_time_isostr(end_time),
         successfully='successfully' if successful else 'with errors',
         delta_time=str(end_time - start_time).split('.')[0])
