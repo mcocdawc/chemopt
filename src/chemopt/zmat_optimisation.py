@@ -280,7 +280,7 @@ def _get_markdown(molecule):
 
 
 def _get_table_header():
-    get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^28.28} |'.format
+    get_row = '|{:>4.4}| {:^16.16} | {:^16.16} | {:^30.30} |'.format
     header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
                       r'$\max(|\nabla_X E |) [E_h$/Å]')
               + '\n'
@@ -296,7 +296,7 @@ def _get_table_row(calculated, grad_energy_X):
     else:
         delta = calculated[-1]['energy'] - calculated[-2]['energy']
     grad_energy_X_max = abs(grad_energy_X).max()
-    get_str = '|{:>4}| {:16.10f} | {:16.10f} | {:28.10f} |\n'.format
+    get_str = '|{:>4}| {:16.10f} | {:16.10f} | {:30.10f} |\n'.format
     return get_str(n, energy, delta, grad_energy_X_max)
 
 
