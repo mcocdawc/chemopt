@@ -8,7 +8,7 @@ from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 from sympy import latex
 
-from chemopt import __version__
+from chemopt import __version__, export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.exception import ConvergenceFinished
@@ -16,6 +16,7 @@ from chemopt.interface.generic import calculate
 from tabulate import tabulate
 
 
+@export
 @substitute_docstr
 def optimise(zmolecule, hamiltonian, basis,
              symbols=None,
@@ -95,14 +96,12 @@ def optimise(zmolecule, hamiltonian, basis,
         print(header)
         with open(md_out, 'w') as f:
             f.write(header)
-        return 5
         calculated, convergence = _zmat_symb_optimise(
-            zmolecule=zmolecule, el_calc_input=el_calc_input,
+            zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
-    return 2
 
     to_molden(
         [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
@@ -138,26 +137,72 @@ def _zmat_generic_optimise(
 
 
 def _zmat_symb_optimise(
-        zmolecule, el_calc_input, md_out, backend, hamiltonian, basis, charge,
+        zmolecule, symbols, el_calc_input, md_out, backend,
+        hamiltonian, basis, charge,
         title, multiplicity, etol, gtol, max_iter,
         num_procs, mem_per_proc, **kwargs):
-    pass
-    # def _get_C_rad(zmolecule):
-    #     C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
-    #     C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
-    #     return C_rad.flatten(order='F')
-    # V = _get_generic_opt_V(
-    #     zmolecule=zmolecule, el_calc_input=el_calc_input,
-    #     md_out=md_out, backend=backend, hamiltonian=hamiltonian,
-    #     basis=basis, charge=charge, title=title, multiplicity=multiplicity,
-    #     etol=etol, gtol=gtol, max_iter=max_iter,
-    #     num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
-    # try:
-    #     minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
-    # except ConvergenceFinished as e:
-    #     convergence = e
-    # calculated = V(get_calculated=True)
-    # return calculated, convergence
+    V = _get_symbolic_opt_V(
+        zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
+        md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+        basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+        etol=etol, gtol=gtol, max_iter=max_iter,
+        num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+    try:
+        minimize(V, x0=[v for s, v in symbols], jac=True, method='BFGS')
+    except ConvergenceFinished as e:
+        convergence = e
+    calculated = V(get_calculated=True)
+    return calculated, convergence
+
+
+def _get_symbolic_opt_V(
+        zmolecule, symbols, el_calc_input, md_out, backend,
+        hamiltonian, basis, charge, title, multiplicity,
+        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+    # Because substitution has a non sideeffect free on self
+    zmolecule = zmolecule.copy()
+    symbolic_expressions = [s for s, v in symbols]
+
+    def V(values=None, get_calculated=False,
+          calculated=[]):  # pylint:disable=dangerous-default-value
+        if get_calculated:
+            return calculated
+        elif values is not None:
+            new_zmat = zmolecule.subs(list(zip(symbolic_expressions, values)))
+
+            result = calculate(
+                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
+                backend=backend, hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+            energy, grad_energy_X = result['energy'], result['gradient']
+
+            grad_X = new_zmat.get_grad_cartesian(as_function=False,
+                                                 drop_auto_dummies=True)
+            grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
+                                   * grad_X, axis=(0, 1))
+            for i in range(min(3, grad_energy_C.shape[0])):
+                grad_energy_C[i, i:] = 0.
+            return zmolecule.loc[:, ['bond', 'angle', 'dihedral']] * grad_energy_C
+
+            new_zmat.metadata['energy'] = energy
+            new_zmat.metadata['grad_energy'] = grad_energy_C
+            calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
+                               'structure': new_zmat})
+            with open(md_out, 'a') as f:
+                f.write(_get_table_row(calculated, grad_energy_X))
+
+            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
+                raise ConvergenceFinished(successful=True)
+            elif len(calculated) >= max_iter:
+                raise ConvergenceFinished(successful=False)
+
+            return energy, grad_energy_C.flatten()
+        else:
+            raise ValueError
+    return V
 
 
 def _get_generic_opt_V(
@@ -197,9 +242,9 @@ def _get_generic_opt_V(
                                                  drop_auto_dummies=True)
             grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
                                    * grad_X, axis=(0, 1))
-
             for i in range(min(3, grad_energy_C.shape[0])):
                 grad_energy_C[i, i:] = 0.
+
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['grad_energy'] = grad_energy_C
             calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
@@ -298,8 +343,7 @@ Starting {start_time}
 
 def _get_symbol_table(symbols):
     return tabulate([(latex(sym_expr), v) for sym_expr, v in symbols],
-                    tablefmt='pipe', headers=['Symbol', 'Start value'],
-                    floatfmt=".4f")
+                    tablefmt='pipe', headers=['Symbol', 'Start value'])
 
 
 def _get_settings_table(backend, hamiltonian, charge, multiplicity,
