@@ -6,6 +6,7 @@ from os.path import basename, normpath, splitext
 import numpy as np
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
+import sympy
 from sympy import latex
 
 from chemopt import __version__, export
@@ -86,14 +87,12 @@ def optimise(zmolecule, hamiltonian, basis,
             etol=etol, gtol=gtol, max_iter=max_iter,
             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     else:
-        print('hello')
         header = _get_symb_optimise_header(
             zmolecule=zmolecule, symbols=symbols, backend=backend,
             hamiltonian=hamiltonian, basis=basis, charge=charge,
             multiplicity=multiplicity, num_procs=num_procs,
             mem_per_proc=mem_per_proc, start_time=t1, title=title,
             etol=etol, gtol=gtol, max_iter=max_iter)
-        print(header)
         with open(md_out, 'w') as f:
             f.write(header)
         calculated, convergence = _zmat_symb_optimise(
@@ -148,7 +147,8 @@ def _zmat_symb_optimise(
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     try:
-        minimize(V, x0=[v for s, v in symbols], jac=True, method='BFGS')
+        minimize(V, x0=np.array([v for s, v in symbols]),
+                 jac=True, method='BFGS')
     except ConvergenceFinished as e:
         convergence = e
     calculated = V(get_calculated=True)
@@ -159,8 +159,9 @@ def _get_symbolic_opt_V(
         zmolecule, symbols, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
-    # Because substitution has a non sideeffect free on self
+    # Because substitution has a sideeffect on self
     zmolecule = zmolecule.copy()
+    zmat_values = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
@@ -168,7 +169,8 @@ def _get_symbolic_opt_V(
         if get_calculated:
             return calculated
         elif values is not None:
-            new_zmat = zmolecule.subs(list(zip(symbolic_expressions, values)))
+            substitutions = list(zip(symbolic_expressions, values))
+            new_zmat = zmolecule.subs(substitutions)
 
             result = calculate(
                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
@@ -179,18 +181,17 @@ def _get_symbolic_opt_V(
 
             energy, grad_energy_X = result['energy'], result['gradient']
 
-            grad_X = new_zmat.get_grad_cartesian(as_function=False,
-                                                 drop_auto_dummies=True)
-            grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
-                                   * grad_X, axis=(0, 1))
-            for i in range(min(3, grad_energy_C.shape[0])):
-                grad_energy_C[i, i:] = 0.
-            return zmolecule.loc[:, ['bond', 'angle', 'dihedral']] * grad_energy_C
+            grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
+
+            energy_symb = np.sum(zmat_values * grad_energy_C)
+            grad_energy_symb = sympy.Matrix([
+                energy_symb.diff(arg) for arg in symbolic_expressions])
+            grad_energy_symb = grad_energy_symb.T.subs(substitutions)
+            grad_energy_symb = np.array(grad_energy_symb).astype('f8')
 
             new_zmat.metadata['energy'] = energy
-            new_zmat.metadata['grad_energy'] = grad_energy_C
-            calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
-                               'structure': new_zmat})
+            new_zmat.metadata['symbols'] = substitutions
+            calculated.append({'energy': energy, 'structure': new_zmat})
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_X))
 
@@ -199,7 +200,7 @@ def _get_symbolic_opt_V(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
-            return energy, grad_energy_C.flatten()
+            return energy, grad_energy_symb
         else:
             raise ValueError
     return V
@@ -237,13 +238,7 @@ def _get_generic_opt_V(
                 num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
             energy, grad_energy_X = result['energy'], result['gradient']
-
-            grad_X = new_zmat.get_grad_cartesian(as_function=False,
-                                                 drop_auto_dummies=True)
-            grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
-                                   * grad_X, axis=(0, 1))
-            for i in range(min(3, grad_energy_C.shape[0])):
-                grad_energy_C[i, i:] = 0.
+            grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
 
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['grad_energy'] = grad_energy_C
@@ -261,6 +256,16 @@ def _get_generic_opt_V(
         else:
             raise ValueError
     return V
+
+
+def _get_grad_energy_C(zmat, grad_energy_X):
+    grad_X = new_zmat.get_grad_cartesian(as_function=False,
+                                         drop_auto_dummies=True)
+    grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
+                           * grad_X, axis=(0, 1))
+    for i in range(min(3, grad_energy_C.shape[0])):
+        grad_energy_C[i, i:] = 0.
+    retrun grad_energy_C
 
 
 def _get_generic_optimise_header(
