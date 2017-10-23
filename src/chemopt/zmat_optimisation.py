@@ -259,7 +259,7 @@ def _get_generic_opt_V(
 
 
 def _get_grad_energy_C(zmat, grad_energy_X):
-    grad_X = new_zmat.get_grad_cartesian(as_function=False,
+    grad_X = zmat.get_grad_cartesian(as_function=False,
                                          drop_auto_dummies=True)
     grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
                            * grad_X, axis=(0, 1))
