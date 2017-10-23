@@ -186,7 +186,7 @@ def _get_symbolic_opt_V(
             energy_symb = np.sum(zmat_values * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
-            grad_energy_symb = grad_energy_symb.T.subs(substitutions)
+            grad_energy_symb = grad_energy_symb.subs(substitutions)
             grad_energy_symb = np.array(grad_energy_symb).astype('f8')
 
             print(grad_energy_symb)
