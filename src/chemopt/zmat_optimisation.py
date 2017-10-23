@@ -189,6 +189,9 @@ def _get_symbolic_opt_V(
             grad_energy_symb = grad_energy_symb.T.subs(substitutions)
             grad_energy_symb = np.array(grad_energy_symb).astype('f8')
 
+            print(grad_energy_symb)
+            print(grad_energy_symb.shape)
+
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['symbols'] = substitutions
             calculated.append({'energy': energy, 'structure': new_zmat})
@@ -259,13 +262,11 @@ def _get_generic_opt_V(
 
 
 def _get_grad_energy_C(zmat, grad_energy_X):
-    grad_X = zmat.get_grad_cartesian(as_function=False,
-                                         drop_auto_dummies=True)
-    grad_energy_C = np.sum(grad_energy_X.T[:, :, None, None]
-                           * grad_X, axis=(0, 1))
-    for i in range(min(3, grad_energy_C.shape[0])):
-        grad_energy_C[i, i:] = 0.
-    return grad_energy_C
+    grad_X = zmat.get_grad_cartesian(as_function=False, drop_auto_dummies=True)
+    grad_V_C = np.sum(grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
+    for i in range(min(3, grad_V_C.shape[0])):
+        grad_V_C[i, i:] = 0.
+    return grad_V_C
 
 
 def _get_generic_optimise_header(
