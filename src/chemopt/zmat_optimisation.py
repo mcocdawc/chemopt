@@ -4,9 +4,9 @@ from datetime import datetime
 from os.path import basename, normpath, splitext
 
 import numpy as np
+import sympy
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
-import sympy
 from sympy import latex
 
 from chemopt import __version__, export
@@ -186,8 +186,8 @@ def _get_symbolic_opt_V(
             energy_symb = np.sum(zmat_values * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
-            grad_energy_symb = grad_energy_symb.subs(substitutions)
-            grad_energy_symb = np.array(grad_energy_symb).astype('f8').flatten()
+            grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
+            grad_energy_symb = grad_energy_symb.astype('f8').flatten()
 
             print(grad_energy_symb)
             print(grad_energy_symb.shape)
