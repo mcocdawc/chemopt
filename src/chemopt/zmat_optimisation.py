@@ -187,7 +187,7 @@ def _get_symbolic_opt_V(
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = grad_energy_symb.subs(substitutions)
-            grad_energy_symb = np.array(grad_energy_symb).astype('f8')
+            grad_energy_symb = np.array(grad_energy_symb).astype('f8').flatten()
 
             print(grad_energy_symb)
             print(grad_energy_symb.shape)
