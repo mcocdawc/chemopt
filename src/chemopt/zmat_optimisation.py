@@ -265,7 +265,7 @@ def _get_grad_energy_C(zmat, grad_energy_X):
                            * grad_X, axis=(0, 1))
     for i in range(min(3, grad_energy_C.shape[0])):
         grad_energy_C[i, i:] = 0.
-    retrun grad_energy_C
+    return grad_energy_C
 
 
 def _get_generic_optimise_header(
