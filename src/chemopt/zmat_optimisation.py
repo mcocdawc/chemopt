@@ -156,60 +156,6 @@ def _zmat_symb_optimise(
     return calculated, convergence
 
 
-def _get_symbolic_opt_V(
-        zmolecule, symbols, el_calc_input, md_out, backend,
-        hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
-    # Because substitution has a sideeffect on self
-    zmolecule = zmolecule.copy()
-    zmat_values = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values
-    symbolic_expressions = [s for s, v in symbols]
-
-    def V(values=None, get_calculated=False,
-          calculated=[]):  # pylint:disable=dangerous-default-value
-        if get_calculated:
-            return calculated
-        elif values is not None:
-            substitutions = list(zip(symbolic_expressions, values))
-            new_zmat = zmolecule.subs(substitutions)
-
-            result = calculate(
-                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
-                backend=backend, hamiltonian=hamiltonian, basis=basis,
-                charge=charge, title=title,
-                multiplicity=multiplicity,
-                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
-
-            energy, grad_energy_X = result['energy'], result['gradient']
-
-            grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
-
-            energy_symb = np.sum(zmat_values * grad_energy_C)
-            grad_energy_symb = sympy.Matrix([
-                energy_symb.diff(arg) for arg in symbolic_expressions])
-            grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
-            grad_energy_symb = grad_energy_symb.astype('f8').flatten()
-
-            print(grad_energy_symb)
-            print(grad_energy_symb.shape)
-
-            new_zmat.metadata['energy'] = energy
-            new_zmat.metadata['symbols'] = substitutions
-            calculated.append({'energy': energy, 'structure': new_zmat})
-            with open(md_out, 'a') as f:
-                f.write(_get_table_row(calculated, grad_energy_X))
-
-            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
-                raise ConvergenceFinished(successful=True)
-            elif len(calculated) >= max_iter:
-                raise ConvergenceFinished(successful=False)
-
-            return energy, grad_energy_symb
-        else:
-            raise ValueError
-    return V
-
-
 def _get_generic_opt_V(
         zmolecule, el_calc_input, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
@@ -262,6 +208,61 @@ def _get_generic_opt_V(
     return V
 
 
+def _get_symbolic_opt_V(
+        zmolecule, symbols, el_calc_input, md_out, backend,
+        hamiltonian, basis, charge, title, multiplicity,
+        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+    # Because substitution has a sideeffect on self
+    zmolecule = zmolecule.copy()
+    zmat_values = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values
+    symbolic_expressions = [s for s, v in symbols]
+
+    def V(values=None, get_calculated=False,
+          calculated=[]):  # pylint:disable=dangerous-default-value
+        if get_calculated:
+            return calculated
+        elif values is not None:
+            substitutions = list(zip(symbolic_expressions, values))
+            new_zmat = zmolecule.subs(substitutions)
+
+            result = calculate(
+                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
+                backend=backend, hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+            energy, grad_energy_X = result['energy'], result['gradient']
+
+            grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
+
+            energy_symb = np.sum(zmat_values * grad_energy_C)
+            grad_energy_symb = sympy.Matrix([
+                energy_symb.diff(arg) for arg in symbolic_expressions])
+            grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
+            grad_energy_symb = grad_energy_symb.astype('f8').flatten()
+
+            print(grad_energy_symb)
+            print(grad_energy_symb.shape)
+
+            new_zmat.metadata['energy'] = energy
+            new_zmat.metadata['symbols'] = substitutions
+            calculated.append({'energy': energy, 'structure': new_zmat})
+            with open(md_out, 'a') as f:
+                f.write(_get_table_row(calculated, grad_energy_X))
+
+            if is_converged(calculated, grad_energy_symb,
+                            etol=etol, gtol=gtol):
+                raise ConvergenceFinished(successful=True)
+            elif len(calculated) >= max_iter:
+                raise ConvergenceFinished(successful=False)
+
+            return energy, grad_energy_symb
+        else:
+            raise ValueError
+    return V
+
+
 def _get_grad_energy_C(zmat, grad_energy_X):
     grad_X = zmat.get_grad_cartesian(as_function=False, drop_auto_dummies=True)
     grad_V_C = np.sum(grad_energy_X.T[:, :, None, None] * grad_X, axis=(0, 1))
@@ -305,7 +306,7 @@ Starting {start_time}
         cartesian=_get_geometry_markdown(zmolecule.get_cartesian()),
         calculation_setup=settings_table,
         start_time=_get_time_isostr(start_time),
-        table_header=_get_table_header())
+        table_header=_get_table_header_generic_opt())
     return header
 
 
@@ -344,7 +345,7 @@ Starting {start_time}
         version=__version__, zmat=_get_geometry_markdown(zmolecule),
         calculation_setup=settings_table, symbols=_get_symbol_table(symbols),
         start_time=_get_time_isostr(start_time),
-        table_header=_get_table_header())
+        table_header=_get_table_header_symb_opt())
     return header
 
 
@@ -373,10 +374,20 @@ def _get_geometry_markdown(molecule):
                     floatfmt='.4f')
 
 
-def _get_table_header():
+def _get_table_header_generic_opt():
     get_row = '|{:>4.4}|{:^16.16}|{:^16.16}|{:^31.31}|'.format
     header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
                       r'$\max(|\nabla_X E |) [E_h$/Å]')
+              + '\n'
+              + get_row(3 * '-' + ':', 15 * '-' + ':',
+                        15 * '-' + ':', 30 * '-' + ':'))
+    return header
+
+
+def _get_table_header_symb_opt():
+    get_row = '|{:>4.4}|{:^16.16}|{:^16.16}|{:^31.31}|'.format
+    header = (get_row('n', r'$E [E_h]$', r'$\Delta E [E_h]$',
+                      r'$\max(|\nabla E |) [E_h$/Å]')
               + '\n'
               + get_row(3 * '-' + ':', 15 * '-' + ':',
                         15 * '-' + ':', 30 * '-' + ':'))
