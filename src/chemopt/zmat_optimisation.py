@@ -216,7 +216,7 @@ def _get_symbolic_opt_V(
     zmolecule = zmolecule.copy()
     value_cols = ['bond', 'angle', 'dihedral']
     zmolecule_values = zmolecule.loc[:, value_cols].values
-    zmolecule_values[:, [1, 2]] = sympy.radians(zmolecule_values[:, [1, 2]])
+    zmolecule_values[:, [1, 2]] = sympy.rad(zmolecule_values[:, [1, 2]])
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
