@@ -128,7 +128,8 @@ def _zmat_generic_optimise(
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     try:
-        minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS')
+        minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS',
+                 options={'gtol': 1e-10})
     except ConvergenceFinished as e:
         convergence = e
     calculated = V(get_calculated=True)
