@@ -239,7 +239,7 @@ def _get_symbolic_opt_V(
 
             # Critical point
             new_zmat_values = new_zmat.loc[:, value_cols].values
-            energy_symb = np.sum((zmolecule - new_zmat_values) * grad_energy_C)
+            energy_symb = np.sum((zmolecule_values - new_zmat_values) * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
