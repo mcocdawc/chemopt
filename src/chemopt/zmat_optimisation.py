@@ -97,12 +97,7 @@ def optimise(zmolecule, hamiltonian, basis,
             f.write(header)
 
         # calculated, convergence = _zmat_symb_optimise(
-         V = _zmat_symb_optimise(
-             zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
-             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
-             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
-             etol=etol, gtol=gtol, max_iter=max_iter,
-             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+         V = _zmat_symb_optimise(zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input, md_out=md_out, backend=backend, hamiltonian=hamiltonian, basis=basis, charge=charge, title=title, multiplicity=multiplicity, etol=etol, gtol=gtol, max_iter=max_iter, num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
         return V
 
     to_molden(
