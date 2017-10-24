@@ -236,7 +236,8 @@ def _get_symbolic_opt_V(
 
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
 
-            energy_symb = np.sum(zmat_values * grad_energy_C)
+            # Critical point
+            energy_symb = np.sum((zmat_values - new_zmat) * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
