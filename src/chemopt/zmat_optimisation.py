@@ -214,7 +214,8 @@ def _get_symbolic_opt_V(
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     # Because substitution has a sideeffect on self
     zmolecule = zmolecule.copy()
-    zmat_values = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values
+    value_cols = ['bond', 'angle', 'dihedral']
+    zmolecule_values = zmolecule.loc[:, value_cols].values
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
@@ -237,7 +238,8 @@ def _get_symbolic_opt_V(
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
 
             # Critical point
-            energy_symb = np.sum((zmolecule - new_zmat).loc[:, ['bond', 'angle', 'dihedral']] * grad_energy_C)
+            new_zmat_values = new_zmat.loc[:, value_cols].values
+            energy_symb = np.sum((zmolecule - new_zmat_values) * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
