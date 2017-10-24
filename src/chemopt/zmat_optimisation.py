@@ -95,12 +95,19 @@ def optimise(zmolecule, hamiltonian, basis,
             etol=etol, gtol=gtol, max_iter=max_iter)
         with open(md_out, 'w') as f:
             f.write(header)
-        calculated, convergence = _zmat_symb_optimise(
+
+         return _zmat_symb_optimise(
             zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+        # calculated, convergence = _zmat_symb_optimise(
+        #     zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
+        #     md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+        #     basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+        #     etol=etol, gtol=gtol, max_iter=max_iter,
+        #     num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
     to_molden(
         [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
@@ -147,6 +154,7 @@ def _zmat_symb_optimise(
         basis=basis, charge=charge, title=title, multiplicity=multiplicity,
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+    return V
     try:
         minimize(V, x0=np.array([v for s, v in symbols]),
                  jac=True, method='BFGS')
