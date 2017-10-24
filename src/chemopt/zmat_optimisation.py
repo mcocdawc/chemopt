@@ -147,7 +147,6 @@ def _zmat_symb_optimise(
         basis=basis, charge=charge, title=title, multiplicity=multiplicity,
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
-    return V
     try:
         minimize(V, x0=np.array([v for s, v in symbols]),
                  jac=True, method='BFGS')
