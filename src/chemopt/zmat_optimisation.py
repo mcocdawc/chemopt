@@ -465,9 +465,7 @@ def is_converged(calculated, grad_energy_X=None,
     Returns:
         bool:
     """
-    if len(calculated) == 0:
-        return False
-    elif len(calculated) == 1:
+    if len(calculated) in {0, 1, 2}:
         return False
     else:
         delta_energy = calculated[-1]['energy'] - calculated[-2]['energy']
