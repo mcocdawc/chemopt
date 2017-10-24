@@ -216,7 +216,6 @@ def _get_symbolic_opt_V(
     zmolecule = zmolecule.copy()
     value_cols = ['bond', 'angle', 'dihedral']
     zmolecule_values = zmolecule.loc[:, value_cols].values
-    zmolecule_values[:, [1, 2]] = sympy.rad(zmolecule_values[:, [1, 2]])
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
@@ -237,6 +236,7 @@ def _get_symbolic_opt_V(
             energy, grad_energy_X = result['energy'], result['gradient']
 
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
+            grad_energy_C[:, [1, 2]] = np.rad2deg(grad_energy_C[:, [1, 2]])
 
             energy_symb = np.sum(zmolecule_values * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
