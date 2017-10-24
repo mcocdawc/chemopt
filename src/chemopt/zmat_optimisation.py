@@ -237,7 +237,6 @@ def _get_symbolic_opt_V(
 
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
             grad_energy_C[:, [1, 2]] = np.rad2deg(grad_energy_C[:, [1, 2]])
-
             energy_symb = np.sum(zmolecule_values * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
@@ -250,8 +249,7 @@ def _get_symbolic_opt_V(
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_symb))
 
-            if is_converged(calculated, grad_energy_symb,
-                            etol=etol, gtol=gtol):
+            if is_converged(calculated, etol=etol):
                 raise ConvergenceFinished(successful=True)
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
@@ -453,7 +451,7 @@ def rename_existing(filepath):
 
 
 @substitute_docstr
-def is_converged(calculated, grad_energy_X,
+def is_converged(calculated, grad_energy_X=None,
                  etol=fixed_defaults['etol'], gtol=fixed_defaults['gtol']):
     """Returns if an optimization is converged.
 
@@ -473,7 +471,10 @@ def is_converged(calculated, grad_energy_X,
         return False
     else:
         delta_energy = calculated[-1]['energy'] - calculated[-2]['energy']
-        return abs(delta_energy) < etol and abs(grad_energy_X).max() < gtol
+        if grad_energy_X is None:
+            return abs(delta_energy) < etol
+        else:
+            return abs(delta_energy) < etol and abs(grad_energy_X).max() < gtol
 
 
 def _get_default_filepaths(md_out, molden_out, el_calc_input):
