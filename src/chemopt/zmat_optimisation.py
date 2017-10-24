@@ -249,7 +249,7 @@ def _get_symbolic_opt_V(
             new_zmat.metadata['symbols'] = substitutions
             calculated.append({'energy': energy, 'structure': new_zmat})
             with open(md_out, 'a') as f:
-                f.write(_get_table_row(calculated, grad_energy_X))
+                f.write(_get_table_row(calculated, grad_energy_symb))
 
             if is_converged(calculated, grad_energy_symb,
                             etol=etol, gtol=gtol):
@@ -394,7 +394,7 @@ def _get_table_header_symb_opt():
     return header
 
 
-def _get_table_row(calculated, grad_energy_X):
+def _get_table_row(calculated, grad_energy):
     n = len(calculated)
     energy = calculated[-1]['energy']
     if n == 1:
@@ -404,7 +404,7 @@ def _get_table_row(calculated, grad_energy_X):
     # table header was:
     # n, energy, Delta energy, max(abs(grad_energy_X))
     get_str = '|{:>4}|{:16.10f}|{:16.10f}|{:31.10f}|\n'.format
-    return get_str(n, energy, delta, abs(grad_energy_X).max())
+    return get_str(n, energy, delta, abs(grad_energy).max())
 
 
 def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
