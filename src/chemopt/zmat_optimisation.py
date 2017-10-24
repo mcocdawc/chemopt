@@ -243,6 +243,9 @@ def _get_symbolic_opt_V(
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
             grad_energy_symb = grad_energy_symb.astype('f8').flatten()
 
+            print(new_zmat)
+            print(grad_energy_symb)
+
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['symbols'] = substitutions
             calculated.append({'energy': energy, 'structure': new_zmat})
