@@ -349,7 +349,8 @@ Starting {start_time}
 
 
 def _get_symbol_table(symbols):
-    return tabulate([(latex(sym_expr), v) for sym_expr, v in symbols],
+    latex_table = [('${}$'.format(latex(symb)), v) for symb, v in symbols]
+    return tabulate(latex_table,
                     tablefmt='pipe', headers=['Symbol', 'Start value'])
 
 
