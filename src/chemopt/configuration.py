@@ -155,19 +155,19 @@ docstring['el_calc_input'] = "Specify the input filename for \
 electronic calculations. \
 If it is None, the filename of the calling python script is used \
 (With the suffix ``.inp`` instead of ``.py``). \
-The output will be ``os.path.splitext(el_calc_input)[0] + '.out'``.\n"
+The output will be ``os.path.splitext(inputfile)[0] + '.inp'``.\n"
 
 docstring['md_out'] = "Specify the output filename for \
 chemopt output files. \
 If it is None, the filename of the calling python script is used \
 (With the suffix ``.md`` instead of ``.py``). \
-The output will be ``os.path.splitext(el_calc_input)[0] + '.md'``.\n"
+The output will be ``os.path.splitext(inputfile)[0] + '.md'``.\n"
 
 docstring['molden_out'] = "Specify the output filename for \
 the molden file from a geometry optimisation. \
 If it is None, the filename of the calling python script is used \
 (With the suffix ``.molden`` instead of ``.py``). \
-The output will be ``os.path.splitext(el_calc_input)[0] + '.molden'``.\n"
+The output will be ``os.path.splitext(inputfile)[0] + '.molden'``.\n"
 
 docstring['backend'] = "Specify which QM program suite shoud be used. \
 Allowed values are {}, \

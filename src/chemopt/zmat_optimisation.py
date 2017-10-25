@@ -44,7 +44,11 @@ def optimise(zmolecule, hamiltonian, basis,
             An example is: ``[(r, 1.1), (alpha, 120)]``.
             Has exactly the same format as the multi-parameter substitution
             in sympy.
-        el_calc_input (str): {el_calc_input}
+        el_calc_input (str): Specify the input filename for electronic
+            calculations. If it is None, the filename of the calling
+            python script is used (With the suffix ``.inp`` instead of ``.py``)
+            and the files for the electronic calculations will reside in their
+            own directory.
         md_out (str): {md_out}
         molden_out (str): {molden_out}
         backend (str): {backend}
