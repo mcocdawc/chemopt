@@ -316,6 +316,12 @@ def _get_symb_optimise_header(
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
+## Input File
+
+```python
+{input_file}
+```
+
 ## Settings for the calculations
 
 {calculation_setup}
@@ -340,8 +346,15 @@ Starting {start_time}
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc)
 
+    input_filepath = splitext(basename(inspect.stack()[-1][1]))[0]
+
+    with open(input_filepath, 'r') as f:
+        input_file = ''.join(f.readlines())
+
     header = get_header(
-        version=__version__, zmat=_get_geometry_markdown(zmolecule),
+        version=__version__,
+        input_file=input_file,
+        zmat=_get_geometry_markdown(zmolecule),
         calculation_setup=settings_table, symbols=_get_symbol_table(symbols),
         start_time=_get_time_isostr(start_time),
         table_header=_get_table_header_symb_opt())
