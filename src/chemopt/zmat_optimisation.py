@@ -217,10 +217,10 @@ def _get_symbolic_opt_V(
     zm_rad = zmolecule.copy()
     zm_deg = zmolecule.copy()
     for col in ['angle', 'dihedral']:
-        zm_rad[col] = zm_rad[col].apply(
+        zm_rad.unsafe_loc[:, col] = zm_rad[col].apply(
             lambda x: x if isinstance(x, sympy.Basic) else np.radians(x))
     for col in ['angle', 'dihedral']:
-        zm_deg[col] = zm_deg[col].apply(
+        zm_deg.unsafe_loc[:, col] = zm_deg[col].apply(
             lambda x: sympy.deg(x) if isinstance(x, sympy.Basic) else x)
     symbolic_expressions = [s for s, v in symbols]
 
