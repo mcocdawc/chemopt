@@ -257,7 +257,8 @@ def _get_symbolic_opt_V(
 
             new_zmat.metadata['energy'] = energy
             new_zmat.metadata['symbols'] = substitutions
-            calculated.append({'energy': energy, 'structure': new_zmat})
+            calculated.append({'energy': energy, 'structure': new_zmat,
+                               'symbols': substitutions})
             with open(md_out, 'a') as f:
                 f.write(_get_table_row(calculated, grad_energy_symb))
 
