@@ -30,7 +30,9 @@ def optimise(zmolecule, hamiltonian, basis,
              charge=fixed_defaults['charge'],
              title=fixed_defaults['title'],
              multiplicity=fixed_defaults['multiplicity'],
-             num_procs=None, mem_per_proc=None, **kwargs):
+             num_procs=None, mem_per_proc=None,
+             coord_fmt=fixed_defaults['coord_fmt'],
+             **kwargs):
     """Optimize a molecule.
 
     Args:
@@ -50,6 +52,7 @@ def optimise(zmolecule, hamiltonian, basis,
         max_iter (int): {max_iter}
         num_procs (int): {num_procs}
         mem_per_proc (str): {mem_per_proc}
+        coord_fmt (str): {coord_fmt}
 
     Returns:
         list: A list of dictionaries. Each dictionary has three keys:
@@ -78,7 +81,7 @@ def optimise(zmolecule, hamiltonian, basis,
             basis=basis, charge=charge, multiplicity=multiplicity,
             num_procs=num_procs, mem_per_proc=mem_per_proc,
             start_time=t1, title=title,
-            etol=etol, gtol=gtol, max_iter=max_iter)
+            etol=etol, gtol=gtol, max_iter=max_iter, coord_fmt=coord_fmt)
         with open(md_out, 'w') as f:
             f.write(header)
         calculated, convergence = _zmat_generic_optimise(
@@ -93,7 +96,7 @@ def optimise(zmolecule, hamiltonian, basis,
             hamiltonian=hamiltonian, basis=basis, charge=charge,
             multiplicity=multiplicity, num_procs=num_procs,
             mem_per_proc=mem_per_proc, start_time=t1, title=title,
-            etol=etol, gtol=gtol, max_iter=max_iter)
+            etol=etol, gtol=gtol, max_iter=max_iter, coord_fmt=coord_fmt)
         with open(md_out, 'w') as f:
             f.write(header)
         calculated, convergence = _zmat_symb_optimise(
@@ -111,7 +114,8 @@ def optimise(zmolecule, hamiltonian, basis,
             footer = _get_generic_footer(
                 opt_zmat=calculated[-1]['structure'], start_time=t1,
                 end_time=t2, molden_out=molden_out,
-                successful=convergence.successful, n_iter=len(calculated))
+                successful=convergence.successful, n_iter=len(calculated),
+                coord_fmt=coord_fmt)
             f.write(footer)
     else:
         with open(md_out, 'a') as f:
@@ -119,7 +123,8 @@ def optimise(zmolecule, hamiltonian, basis,
                 symbols=calculated[-1]['symbols'],
                 opt_zmat=calculated[-1]['structure'], start_time=t1,
                 end_time=t2, molden_out=molden_out,
-                successful=convergence.successful, n_iter=len(calculated))
+                successful=convergence.successful, n_iter=len(calculated),
+                coord_fmt=coord_fmt)
             f.write(footer)
     return calculated
 
@@ -283,7 +288,7 @@ def _get_grad_energy_C(zmat, grad_energy_X):
 
 def _get_generic_optimise_header(
         zmolecule, backend, hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, max_iter, start_time, num_procs, mem_per_proc):
+        etol, gtol, max_iter, start_time, num_procs, mem_per_proc, coord_fmt):
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
@@ -312,8 +317,10 @@ Starting {start_time}
         num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
     header = get_header(
-        version=__version__, zmat=_get_geometry_markdown(zmolecule),
-        cartesian=_get_geometry_markdown(zmolecule.get_cartesian()),
+        version=__version__,
+        zmat=_get_geometry_markdown(zmolecule, coord_fmt=coord_fmt),
+        cartesian=_get_geometry_markdown(
+            zmolecule.get_cartesian(), coord_fmt=coord_fmt),
         calculation_setup=settings_table,
         start_time=_get_time_isostr(start_time),
         table_header=_get_table_header_generic_opt())
@@ -323,7 +330,7 @@ Starting {start_time}
 def _get_symb_optimise_header(
         zmolecule, symbols, backend, hamiltonian, basis, charge, title,
         multiplicity, etol, gtol, max_iter, start_time, num_procs,
-        mem_per_proc):
+        mem_per_proc, coord_fmt):
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
@@ -365,7 +372,7 @@ Starting {start_time}
     header = get_header(
         version=__version__,
         input_file=input_file,
-        zmat=_get_geometry_markdown(zmolecule),
+        zmat=_get_geometry_markdown(zmolecule, coord_fmt=coord_fmt),
         calculation_setup=settings_table,
         symbols=_get_symbol_table(symbols, header=['Symbol', 'Start Value']),
         start_time=_get_time_isostr(start_time),
@@ -394,11 +401,10 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
     return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
-def _get_geometry_markdown(
-        molecule, coord_float_fmt=fixed_defaults['coord_float_fmt']):
+def _get_geometry_markdown(molecule, coord_fmt=fixed_defaults['coord_fmt']):
     def formatter(x):
         try:
-            return '{{:{}}}'.format(coord_float_fmt).format(x)
+            return '{{:{}}}'.format(coord_fmt).format(x)
         except (TypeError, AttributeError, ValueError):
             return x
 
@@ -452,7 +458,7 @@ def _get_table_row(calculated, grad_energy):
 
 
 def _get_generic_footer(opt_zmat, start_time, end_time,
-                        molden_out, successful, n_iter):
+                        molden_out, successful, n_iter, coord_fmt):
     get_output = """\
 
 ## Optimised Structures
@@ -474,8 +480,9 @@ after {n_iter} iterations at: {end_time}
 and needed: {delta_time}.
 """.format
     output = get_output(
-        zmat=_get_geometry_markdown(opt_zmat),
-        cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
+        zmat=_get_geometry_markdown(opt_zmat, coord_fmt=coord_fmt),
+        cartesian=_get_geometry_markdown(
+            opt_zmat.get_cartesian(), coord_fmt=coord_fmt),
         molden=molden_out, end_time=_get_time_isostr(end_time),
         successfully='successfully' if successful else 'with errors',
         n_iter=n_iter, delta_time=str(end_time - start_time).split('.')[0])
@@ -483,7 +490,7 @@ and needed: {delta_time}.
 
 
 def _get_symbolic_footer(symbols, opt_zmat, start_time, end_time,
-                         molden_out, successful, n_iter):
+                         molden_out, successful, n_iter, coord_fmt):
     get_output = """\
 
 ## Optimised Structures
@@ -513,8 +520,9 @@ and needed: {delta_time}.
     symbol_table = _get_symbol_table(symbols, header=['Symbol', 'End Value'])
     output = get_output(
         symbols_end_values=symbol_table,
-        zmat=_get_geometry_markdown(opt_zmat),
-        cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
+        zmat=_get_geometry_markdown(opt_zmat, coord_fmt=coord_fmt),
+        cartesian=_get_geometry_markdown(
+            opt_zmat.get_cartesian(), coord_fmt=coord_fmt),
         molden=molden_out, end_time=_get_time_isostr(end_time),
         successfully='successfully' if successful else 'with errors',
         n_iter=n_iter, delta_time=str(end_time - start_time).split('.')[0])

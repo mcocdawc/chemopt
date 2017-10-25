@@ -28,7 +28,7 @@ fixed_defaults['title'] = ''
 fixed_defaults['etol'] = 1e-7
 fixed_defaults['gtol'] = 5e-4
 fixed_defaults['max_iter'] = 100
-fixed_defaults['coord_float_fmt'] = '.4f'
+fixed_defaults['coord_fmt'] = '.4f'
 
 
 def _give_default_file_path():
@@ -200,8 +200,8 @@ Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
 for parsing."
 
 
-docstring['coord_float_fmt'] = "A string as float formatter for the output \
+docstring['coord_fmt'] = "A string as float formatter for the output \
 file of chemopt. \
-The default is {}".format(fixed_defaults['coord_float_fmt'])
+The default is {}".format(fixed_defaults['coord_fmt'])
 
 substitute_docstr = Substitution(**docstring)
