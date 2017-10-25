@@ -148,8 +148,9 @@ def _zmat_symb_optimise(
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     try:
-        minimize(V, x0=np.array([v for s, v in symbols]),
+        minimize(V, x0=np.array([v for s, v in symbols], dtype='f8'),
                  jac=True, method='BFGS')
+
     except ConvergenceFinished as e:
         convergence = e
     calculated = V(get_calculated=True)
@@ -238,7 +239,6 @@ def _get_symbolic_opt_V(
             zm_values_rad = zmolecule.loc[:, value_cols].values
             zm_values_rad[:, [1, 2]] = sympy.rad(zm_values_rad[:, [1, 2]])
             energy_symb = np.sum(zm_values_rad * grad_energy_C)
-            print(energy_symb)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
@@ -255,8 +255,6 @@ def _get_symbolic_opt_V(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
-            print(grad_energy_symb)
-            print(grad_energy_symb.dtypes)
             return energy, grad_energy_symb
         else:
             raise ValueError
