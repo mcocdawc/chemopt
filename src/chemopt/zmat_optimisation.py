@@ -256,6 +256,7 @@ def _get_symbolic_opt_V(
                 raise ConvergenceFinished(successful=False)
 
             print(grad_energy_symb)
+            print(grad_energy_symb.dtypes)
             return energy, grad_energy_symb
         else:
             raise ValueError
