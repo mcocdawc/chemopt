@@ -369,16 +369,19 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
 
 
 def _get_geometry_markdown(molecule, float_fmt='.4f'):
+    latex_symb = molecule._sympy_formatter()
     if isinstance(molecule, cc.Cartesian):
-        to_be_printed = molecule._sympy_formatter()._frame.loc[:, ['atom', 'x', 'y', 'z']]
+        to_be_printed = latex_symb._frame.loc[:, ['atom', 'x', 'y', 'z']]
         return tabulate(to_be_printed, tablefmt='pipe', headers='keys',
                         floatfmt=['.0f', '', float_fmt, float_fmt, float_fmt])
     elif isinstance(molecule, cc.Zmat):
         columns = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
-        to_be_printed = molecule._sympy_formatter()._abs_ref_formatter(format_as='latex')._frame.loc[:, columns]
+        latex_symb = latex_symb._abs_ref_formatter(format_as='latex')
+        to_be_printed = latex_symb._frame.loc[:, columns]
         return tabulate(
             to_be_printed, tablefmt='pipe', headers='keys',
-            floatfmt=['.0f', '', '.0f', float_fmt, '.0f', float_fmt, '.0f', float_fmt])
+            floatfmt=['.0f', '', '.0f', float_fmt, '.0f',
+                      float_fmt, '.0f', float_fmt])
 
 
 def _get_table_header_generic_opt():
