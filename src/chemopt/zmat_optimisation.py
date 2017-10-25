@@ -237,7 +237,9 @@ def _get_symbolic_opt_V(
 
             print()
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
-            grad_energy_C[:, [1, 2]] = np.rad2deg(grad_energy_C[:, [1, 2]])
+            # You have to divide, because it is the conversion of
+            # energy / radians to energy / degree
+            grad_energy_C[:, [1, 2]] = grad_energy_C[:, [1, 2]] / np.rad2deg(1)
             energy_symb = np.sum(zmolecule_values * grad_energy_C)
             print(energy_symb)
             grad_energy_symb = sympy.Matrix([
