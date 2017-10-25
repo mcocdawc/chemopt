@@ -312,6 +312,14 @@ def _get_generic_optimise_header(
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
 
+Written by Oskar Weser (oskar.weser@gmail.com)
+
+## Input File
+
+```python
+{input_file}
+```
+
 ## Settings for the calculations
 
 {calculation_setup}
@@ -336,8 +344,16 @@ Starting {start_time}
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc,)
 
+    input_filepath = basename(inspect.stack()[-1][1])
+
+    # Yes I know: One should not use readlines.
+    # BUT: The Input file won't be large!
+    with open(input_filepath, 'r') as f:
+        input_file = ''.join(f.readlines())
+
     header = get_header(
         version=__version__,
+        input_file=input_file,
         zmat=_get_geometry_markdown(zmolecule, coord_fmt=coord_fmt),
         cartesian=_get_geometry_markdown(
             zmolecule.get_cartesian(), coord_fmt=coord_fmt),
@@ -353,6 +369,8 @@ def _get_symb_optimise_header(
         mem_per_proc, coord_fmt):
     get_header = """\
 # This is ChemOpt {version} optimising a molecule in internal coordinates.
+
+Written by Oskar Weser (oskar.weser@gmail.com)
 
 ## Input File
 
@@ -386,6 +404,8 @@ Starting {start_time}
 
     input_filepath = basename(inspect.stack()[-1][1])
 
+    # Yes I know: One should not use readlines.
+    # BUT: The Input file won't be large!
     with open(input_filepath, 'r') as f:
         input_file = ''.join(f.readlines())
 
