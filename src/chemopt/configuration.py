@@ -28,6 +28,7 @@ fixed_defaults['title'] = ''
 fixed_defaults['etol'] = 1e-7
 fixed_defaults['gtol'] = 5e-4
 fixed_defaults['max_iter'] = 100
+fixed_defaults['coord_float_fmt'] = '.4f'
 
 
 def _give_default_file_path():
@@ -185,7 +186,8 @@ docstring['etol'] = "Convergence criterium for the energy."
 
 docstring['gtol'] = "Convergence criterium for the gradient."
 
-docstring['max_iter'] = "Maximum number of iterations."
+docstring['max_iter'] = "Maximum number of iterations. The default is \
+{}.".format(fixed_defaults['max_iter'])
 
 docstring['num_procs'] = "The number of processes to spawn."
 
@@ -196,5 +198,10 @@ This is a string with a number and a unit like '800 Mb'. \
 SI and binary prefixes are supported. \
 Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
 for parsing."
+
+
+docstring['coord_float_fmt'] = "A string as float formatter for the output \
+file of chemopt. \
+The default is {}".format(fixed_defaults['coord_float_fmt'])
 
 substitute_docstr = Substitution(**docstring)
