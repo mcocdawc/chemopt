@@ -215,7 +215,6 @@ def _get_symbolic_opt_V(
     # Because substitution has a sideeffect on self
     zmolecule = zmolecule.copy()
     value_cols = ['bond', 'angle', 'dihedral']
-    zmolecule_values = zmolecule.loc[:, value_cols].values
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
@@ -238,8 +237,10 @@ def _get_symbolic_opt_V(
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
             # You have to divide, because it is the conversion of
             # energy / radians to energy / degree
-            grad_energy_C[:, [1, 2]] = grad_energy_C[:, [1, 2]] / np.rad2deg(1)
-            energy_symb = np.sum(zmolecule_values * grad_energy_C)
+            # grad_energy_C[:, [1, 2]] = grad_energy_C[:, [1, 2]] / np.rad2deg(1)
+            zm_values_rad = zmolecule.loc[:, value_cols].values
+            zm_values_rad[:, [1, 2]] = sympy.rad(zm_values_rad[:, [1, 2]])
+            energy_symb = np.sum(zm_values_rad * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
