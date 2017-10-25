@@ -3,19 +3,19 @@ import os
 from datetime import datetime
 from os.path import basename, normpath, splitext
 
+import chemcoord as cc
 import numpy as np
 import sympy
-import chemcoord as cc
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 from sympy import latex
+from tabulate import tabulate
 
 from chemopt import __version__, export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.exception import ConvergenceFinished
 from chemopt.interface.generic import calculate
-from tabulate import tabulate
 
 
 @export
