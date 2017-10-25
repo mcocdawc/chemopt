@@ -215,7 +215,14 @@ def _get_symbolic_opt_V(
     # Because substitution has a sideeffect on self
     zmolecule = zmolecule.copy()
     value_cols = ['bond', 'angle', 'dihedral']
-    zmolecule_values = zmolecule.loc[:, value_cols].values
+    zm_values_rad = zmolecule.loc[:, value_cols]
+    zm_values_deg = zmolecule.loc[:, value_cols]
+    for col in ['angle', 'dihedral']:
+        zm_values_rad[col] = zm_values_rad[col].apply(
+            lambda x: x if isinstance(x, sympy.Basic) else np.radians(x))
+    for col in ['angle', 'dihedral']:
+        zm_values_deg[col] = zm_values_deg[col].apply(
+            lambda x: sympy.deg(x) if isinstance(x, sympy.Basic) else x)
     symbolic_expressions = [s for s, v in symbols]
 
     def V(values=None, get_calculated=False,
@@ -224,7 +231,7 @@ def _get_symbolic_opt_V(
             return calculated
         elif values is not None:
             substitutions = list(zip(symbolic_expressions, values))
-            new_zmat = zmolecule.subs(substitutions)
+            new_zmat = zm_values_deg.subs(substitutions)
 
             result = calculate(
                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
@@ -239,7 +246,7 @@ def _get_symbolic_opt_V(
             # You have to divide, because it is the conversion of
             # energy / radians to energy / degree
             grad_energy_C[:, [1, 2]] = grad_energy_C[:, [1, 2]] / np.rad2deg(1)
-            energy_symb = np.sum(zmolecule_values * grad_energy_C)
+            energy_symb = np.sum(zm_values_rad * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
