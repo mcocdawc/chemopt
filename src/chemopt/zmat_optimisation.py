@@ -366,16 +366,17 @@ Starting {start_time}
         version=__version__,
         input_file=input_file,
         zmat=_get_geometry_markdown(zmolecule),
-        calculation_setup=settings_table, symbols=_get_symbol_table(symbols),
+        calculation_setup=settings_table,
+        symbols=_get_symbol_table(symbols, header=['Symbol', 'Start Value']),
         start_time=_get_time_isostr(start_time),
         table_header=_get_table_header_symb_opt())
     return header
 
 
-def _get_symbol_table(symbols):
+def _get_symbol_table(symbols, header):
     latex_table = [('${}$'.format(latex(symb)), v) for symb, v in symbols]
     return tabulate(latex_table,
-                    tablefmt='pipe', headers=['Symbol', 'Start value'])
+                    tablefmt='pipe', headers=header)
 
 
 def _get_settings_table(backend, hamiltonian, charge, multiplicity,
@@ -487,7 +488,7 @@ def _get_symbolic_footer(symbols, opt_zmat, start_time, end_time,
 
 ## Optimised Structures
 
-### End Values of symbols
+### Symbols with end values
 
 {symbols_end_values}
 
@@ -509,8 +510,9 @@ The calculation finished {successfully}
 after {n_iter} iterations at: {end_time}
 and needed: {delta_time}.
 """.format
+    symbol_table = _get_symbol_table(symbols, header=['Symbol', 'End Value'])
     output = get_output(
-        symbols_end_values=_get_symbol_table(symbols),
+        symbols_end_values=symbol_table,
         zmat=_get_geometry_markdown(opt_zmat),
         cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
         molden=molden_out, end_time=_get_time_isostr(end_time),
