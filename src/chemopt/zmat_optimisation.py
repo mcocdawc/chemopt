@@ -346,7 +346,7 @@ Starting {start_time}
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc)
 
-    input_filepath = splitext(basename(inspect.stack()[-1][1]))[0]
+    input_filepath = basename(inspect.stack()[-1][1])
 
     with open(input_filepath, 'r') as f:
         input_file = ''.join(f.readlines())
