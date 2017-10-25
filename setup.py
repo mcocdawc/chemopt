@@ -57,4 +57,4 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Utilities'],
-    install_requires=['chemcoord>=2.0.2', 'tabulate', 'datasize'])
+    install_requires=['chemcoord>=2.0.2', 'tabulate>=0.8', 'datasize'])

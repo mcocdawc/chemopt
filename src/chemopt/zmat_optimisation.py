@@ -368,8 +368,8 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
 
 
 def _get_geometry_markdown(molecule):
-    return tabulate(molecule._frame, tablefmt='pipe', headers=molecule.columns,
-                    floatfmt='.4f')
+    return tabulate(molecule._frame, tablefmt='pipe', headers='keys',
+                    floatfmt=['.0f', '', '.4f', '.4f', '.4f'])
 
 
 def _get_table_header_generic_opt():
