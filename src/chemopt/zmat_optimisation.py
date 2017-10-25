@@ -213,15 +213,14 @@ def _get_symbolic_opt_V(
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     # Because substitution has a sideeffect on self
-    zmolecule = zmolecule.copy()
-    value_cols = ['bond', 'angle', 'dihedral']
-    zm_values_rad = zmolecule.loc[:, value_cols]
-    zm_values_deg = zmolecule.loc[:, value_cols]
+    # value_cols = ['bond', 'angle', 'dihedral']
+    zm_rad = zmolecule.copy()
+    zm_deg = zmolecule.copy()
     for col in ['angle', 'dihedral']:
-        zm_values_rad[col] = zm_values_rad[col].apply(
+        zm_rad[col] = zm_rad[col].apply(
             lambda x: x if isinstance(x, sympy.Basic) else np.radians(x))
     for col in ['angle', 'dihedral']:
-        zm_values_deg[col] = zm_values_deg[col].apply(
+        zm_deg[col] = zm_deg[col].apply(
             lambda x: sympy.deg(x) if isinstance(x, sympy.Basic) else x)
     symbolic_expressions = [s for s, v in symbols]
 
@@ -231,7 +230,7 @@ def _get_symbolic_opt_V(
             return calculated
         elif values is not None:
             substitutions = list(zip(symbolic_expressions, values))
-            new_zmat = zm_values_deg.subs(substitutions)
+            new_zmat = zm_deg.subs(substitutions)
 
             result = calculate(
                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
@@ -246,6 +245,7 @@ def _get_symbolic_opt_V(
             # # You have to divide, because it is the conversion of
             # # energy / radians to energy / degree
             # grad_energy_C[:, [1, 2]] = grad_energy_C[:, [1, 2]] / np.rad2deg(1)
+            zm_values_rad = zm_rad.loc[:, ['bond', 'angle', 'dihedral']]
             energy_symb = np.sum(zm_values_rad * grad_energy_C)
             grad_energy_symb = sympy.Matrix([
                 energy_symb.diff(arg) for arg in symbolic_expressions])
