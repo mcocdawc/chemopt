@@ -106,11 +106,21 @@ def optimise(zmolecule, hamiltonian, basis,
     to_molden(
         [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
     t2 = datetime.now()
-    with open(md_out, 'a') as f:
-        footer = _get_footer(
-            opt_zmat=calculated[-1]['structure'], start_time=t1, end_time=t2,
-            molden_out=molden_out, successful=convergence.successful)
-        f.write(footer)
+    if symbols is None:
+        with open(md_out, 'a') as f:
+            footer = _get_generic_footer(
+                opt_zmat=calculated[-1]['structure'], start_time=t1,
+                end_time=t2, molden_out=molden_out,
+                successful=convergence.successful, n_iter=len(calculated))
+            f.write(footer)
+    else:
+        with open(md_out, 'a') as f:
+            footer = _get_symbolic_footer(
+                symbols=calculated[-1]['symbols'],
+                opt_zmat=calculated[-1]['structure'], start_time=t1,
+                end_time=t2, molden_out=molden_out,
+                successful=convergence.successful, n_iter=len(calculated))
+            f.write(footer)
     return calculated
 
 
@@ -439,7 +449,8 @@ def _get_table_row(calculated, grad_energy):
     return get_str(n, energy, delta, abs(grad_energy).max())
 
 
-def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
+def _get_generic_footer(opt_zmat, start_time, end_time,
+                        molden_out, successful, n_iter):
     get_output = """\
 
 ## Optimised Structures
@@ -456,7 +467,8 @@ def _get_footer(opt_zmat, start_time, end_time, molden_out, successful):
 
 Structures were written to {molden}.
 
-The calculation finished {successfully} at: {end_time}
+The calculation finished {successfully}
+after {n_iter} iterations at: {end_time}
 and needed: {delta_time}.
 """.format
     output = get_output(
@@ -464,7 +476,45 @@ and needed: {delta_time}.
         cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
         molden=molden_out, end_time=_get_time_isostr(end_time),
         successfully='successfully' if successful else 'with errors',
-        delta_time=str(end_time - start_time).split('.')[0])
+        n_iter=n_iter, delta_time=str(end_time - start_time).split('.')[0])
+    return output
+
+
+def _get_symbolic_footer(symbols, opt_zmat, start_time, end_time,
+                         molden_out, successful, n_iter):
+    get_output = """\
+
+## Optimised Structures
+
+### End Values of symbols
+
+{symbols_end_values}
+
+
+### Optimised structure as Zmatrix
+
+{zmat}
+
+
+### Optimised structure in cartesian coordinates
+
+{cartesian}
+
+## Closing
+
+Structures were written to {molden}.
+
+The calculation finished {successfully}
+after {n_iter} iterations at: {end_time}
+and needed: {delta_time}.
+""".format
+    output = get_output(
+        symbols_end_values=_get_symbol_table(symbols),
+        zmat=_get_geometry_markdown(opt_zmat),
+        cartesian=_get_geometry_markdown(opt_zmat.get_cartesian()),
+        molden=molden_out, end_time=_get_time_isostr(end_time),
+        successfully='successfully' if successful else 'with errors',
+        n_iter=n_iter, delta_time=str(end_time - start_time).split('.')[0])
     return output
 
 
