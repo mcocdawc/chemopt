@@ -381,14 +381,16 @@ def _get_geometry_markdown(
             return x
     if isinstance(molecule, cc.Cartesian):
         to_be_printed = latex_symb._frame.loc[:, ['atom', 'x', 'y', 'z']]
-        return tabulate(to_be_printed.applymap(formatter),
-                        tablefmt='pipe', headers='keys')
+        for col in ['x', 'y', 'z']:
+            to_be_printed[col] = to_be_printed[col].apply(formatter)
+        return tabulate(to_be_printed, tablefmt='pipe', headers='keys')
     elif isinstance(molecule, cc.Zmat):
         columns = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         latex_symb = latex_symb._abs_ref_formatter(format_as='latex')
         to_be_printed = latex_symb._frame.loc[:, columns]
-        return tabulate(to_be_printed.applymap(formatter),
-                        tablefmt='pipe', headers='keys')
+        for col in ['bond', 'angle', 'dihedral']:
+            to_be_printed[col] = to_be_printed[col].apply(formatter)
+        return tabulate(to_be_printed, tablefmt='pipe', headers='keys')
         # return tabulate(
         #     to_be_printed, tablefmt='pipe', headers='keys',
         #     floatfmt=['.0f', '', '.0f', f_fmt, '.0f', f_fmt, '.0f', f_fmt])
