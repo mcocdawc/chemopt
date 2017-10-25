@@ -371,29 +371,26 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
 
 def _get_geometry_markdown(
         molecule, coord_float_fmt=fixed_defaults['coord_float_fmt']):
-    f_fmt = coord_float_fmt
-    latex_symb = molecule._sympy_formatter()
-
     def formatter(x):
         try:
             return '{{:{}}}'.format(coord_float_fmt).format(x)
-        except:
+        except (TypeError, AttributeError, ValueError):
             return x
+
+    latex_symb = molecule._sympy_formatter()
     if isinstance(molecule, cc.Cartesian):
         to_be_printed = latex_symb._frame.loc[:, ['atom', 'x', 'y', 'z']]
         for col in ['x', 'y', 'z']:
             to_be_printed[col] = to_be_printed[col].apply(formatter)
-        return tabulate(to_be_printed, tablefmt='pipe', headers='keys')
     elif isinstance(molecule, cc.Zmat):
         columns = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
         latex_symb = latex_symb._abs_ref_formatter(format_as='latex')
         to_be_printed = latex_symb._frame.loc[:, columns]
         for col in ['bond', 'angle', 'dihedral']:
             to_be_printed[col] = to_be_printed[col].apply(formatter)
-        return tabulate(to_be_printed, tablefmt='pipe', headers='keys')
-        # return tabulate(
-        #     to_be_printed, tablefmt='pipe', headers='keys',
-        #     floatfmt=['.0f', '', '.0f', f_fmt, '.0f', f_fmt, '.0f', f_fmt])
+
+    return tabulate(to_be_printed, tablefmt='pipe', headers='keys',
+                    stralign='right')
 
 
 def _get_table_header_generic_opt():
