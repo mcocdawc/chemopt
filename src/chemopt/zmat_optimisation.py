@@ -39,7 +39,11 @@ def optimise(zmolecule, hamiltonian, basis,
         zmolecule (chemcoord.Zmat):
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
-        symbols (sympy expressions):
+        symbols (list): A list of tuples. Each tuple consists of a
+            sympy symbolic expression and a starting value.
+            An example is: ``[(r, 1.1), (alpha, 120)]``.
+            Has exactly the same format as the multi-parameter substitution
+            in sympy.
         el_calc_input (str): {el_calc_input}
         md_out (str): {md_out}
         molden_out (str): {molden_out}
@@ -61,8 +65,8 @@ def optimise(zmolecule, hamiltonian, basis,
         The energy gradient ('grad_energy') is given in internal coordinates.
         The units are Hartree / Angstrom for bonds and
         Hartree / radians for angles and dihedrals.
-        The :class:`~chemcoord.Zmat` instance given by ``zmolecule``
-        contains the keys ``['energy', 'grad_energy']`` in ``.metadata``.
+        The :class:`~chemcoord.Zmat` instance given by '``structure``'
+        contains the keys ``['energy', 'symbols']`` in ``.metadata``.
     """
     files = _get_default_filepaths(md_out, molden_out, el_calc_input)
     for filepath in files:

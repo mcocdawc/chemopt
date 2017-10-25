@@ -187,7 +187,7 @@ docstring['etol'] = "Convergence criterium for the energy."
 docstring['gtol'] = "Convergence criterium for the gradient."
 
 docstring['max_iter'] = "Maximum number of iterations. The default is \
-{}.".format(fixed_defaults['max_iter'])
+'{}'.".format(fixed_defaults['max_iter'])
 
 docstring['num_procs'] = "The number of processes to spawn."
 
@@ -199,9 +199,8 @@ SI and binary prefixes are supported. \
 Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
 for parsing."
 
-
-docstring['coord_fmt'] = "A string as float formatter for the output \
-file of chemopt. \
-The default is {}".format(fixed_defaults['coord_fmt'])
+docstring['coord_fmt'] = "A string as float formatter for the coordinates \
+in the output file of chemopt. \
+The default is '{}'".format(fixed_defaults['coord_fmt'])
 
 substitute_docstr = Substitution(**docstring)
