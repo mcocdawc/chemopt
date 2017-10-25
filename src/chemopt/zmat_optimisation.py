@@ -5,6 +5,7 @@ from os.path import basename, normpath, splitext
 
 import numpy as np
 import sympy
+import chemcoord as cc
 from chemcoord.xyz_functions import to_molden
 from scipy.optimize import minimize
 from sympy import latex
@@ -367,9 +368,17 @@ def _get_settings_table(backend, hamiltonian, charge, multiplicity,
     return tabulate(data, tablefmt='pipe', headers=['Backend', backend])
 
 
-def _get_geometry_markdown(molecule):
-    return tabulate(molecule._frame, tablefmt='pipe', headers='keys',
-                    floatfmt=['.0f', '', '.4f', '.4f', '.4f'])
+def _get_geometry_markdown(molecule, float_fmt='.4f'):
+    if isinstance(molecule, cc.Cartesian):
+        to_be_printed = molecule._frame.loc[:, ['atom', 'x', 'y', 'z']]
+        return tabulate(to_be_printed, tablefmt='pipe', headers='keys',
+                        floatfmt=['.0f', '', float_fmt, float_fmt, float_fmt])
+    elif isinstance(molecule, cc.Zmat):
+        columns = ['atom', 'b', 'bond', 'a', 'angle', 'd', 'dihedral']
+        to_be_printed = molecule._frame.loc[:, columns]
+        return tabulate(
+            to_be_printed, tablefmt='pipe', headers='keys',
+            floatfmt=['.0f', '', '.0f', float_fmt, '.0f', float_fmt, '.0f', float_fmt])
 
 
 def _get_table_header_generic_opt():
