@@ -255,6 +255,7 @@ def _get_symbolic_opt_V(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
+            print(grad_energy_symb)
             return energy, grad_energy_symb
         else:
             raise ValueError
