@@ -59,14 +59,26 @@ def optimise(zmolecule, hamiltonian, basis,
         coord_fmt (str): {coord_fmt}
 
     Returns:
-        list: A list of dictionaries. Each dictionary has three keys:
-        ``['energy', 'grad_energy', 'structure']``.
-        The energy is given in Hartree
-        The energy gradient ('grad_energy') is given in internal coordinates.
+        list: A list of dictionaries. The last one is the optimised structure.
+        The keys of each dictionary depend on the used optimisation.
+        In any case each dictionary has at least two keys:
+
+        * 'energy': The energy in Hartree.
+        * 'structure': The Zmatrix.
+
+        If ``symbols`` was ``None`` a generic optimisation was performed and
+        the following keys are available:
+
+        * 'grad_energy': The energy gradient ('grad_energy')
+        in internal coordinates.
         The units are Hartree / Angstrom for bonds and
         Hartree / radians for angles and dihedrals.
-        The :class:`~chemcoord.Zmat` instance given by '``structure``'
-        contains the keys ``['energy', 'symbols']`` in ``.metadata``.
+
+        If ``symbols`` was not ``None`` an optimisation with
+        reduced degrees of freedom was performed and
+        the following keys are available:
+
+        * 'symbols': A list of tuples containing the symbol and its value.
     """
     files = _get_default_filepaths(md_out, molden_out, el_calc_input)
     for filepath in files:
