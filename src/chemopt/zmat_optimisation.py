@@ -164,10 +164,16 @@ def _zmat_generic_optimise(
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     try:
-        minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS',
-                 options={'gtol': 1e-10})
+        opt = minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS',
+                       options={'gtol': 1e-10})
     except ConvergenceFinished as e:
         convergence = e
+    else:
+        if opt.success:
+            convergence = ConvergenceFinished(successful=True)
+        else:
+            convergence = ConvergenceFinished(successful=False)
+
     calculated = V(get_calculated=True)
     return calculated, convergence
 
@@ -184,11 +190,15 @@ def _zmat_symb_optimise(
         etol=etol, gtol=gtol, max_iter=max_iter,
         num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
     try:
-        minimize(V, x0=np.array([v for s, v in symbols], dtype='f8'),
-                 jac=True, method='BFGS')
-
+        opt = minimize(V, x0=np.array([v for s, v in symbols], dtype='f8'),
+                       jac=True, method='BFGS', options={'gtol': 1e-10})
     except ConvergenceFinished as e:
         convergence = e
+    else:
+        if opt.success:
+            convergence = ConvergenceFinished(successful=True)
+        else:
+            convergence = ConvergenceFinished(successful=False)
     calculated = V(get_calculated=True)
     return calculated, convergence
 
