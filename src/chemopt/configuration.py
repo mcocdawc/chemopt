@@ -25,8 +25,8 @@ fixed_defaults['calculation_type'] = 'Single Point'
 fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
-fixed_defaults['etol'] = 1e-7
-fixed_defaults['gtol'] = 5e-4
+fixed_defaults['etol'] = 1e-6
+fixed_defaults['gtol'] = 6e-4
 fixed_defaults['max_iter'] = 100
 fixed_defaults['coord_fmt'] = '.4f'
 
