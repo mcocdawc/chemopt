@@ -3,7 +3,7 @@
 # from pandas.compat import callable, signature  # pylint:disable=redefined-builtin
 # import types
 # import warnings
-# from textwrap import dedent
+from textwrap import dedent
 # from functools import wraps, update_wrapper
 #
 #
