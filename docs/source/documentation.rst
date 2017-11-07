@@ -7,12 +7,12 @@ Optimiser
 In non-redundant internal coordinates (Zmatrix)
 ------------------------------------------------
 
-.. currentmodule:: chemopt.zmat_optimisation
+.. currentmodule:: chemopt
 
 .. autosummary::
     :toctree: src_zmat_optimiser
 
-    optimise
+    ~zmat_optimisation.optimise
 
 
 Interfaces for electronic structure calculation
