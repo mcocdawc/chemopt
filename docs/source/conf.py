@@ -66,7 +66,7 @@ author = 'Oskar Weser'
 # built documents.
 #
 # The short X.Y version.
-version = co.__version__
+# version = co.__version__
 version = '0.1.0'
 # The full version, including alpha/beta/rc tags.
 release = '0.1.0'
