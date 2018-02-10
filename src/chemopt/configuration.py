@@ -176,6 +176,9 @@ the default is '{}'.\n".format(values['backend'], conf_defaults['backend'])
 docstring['molpro_exe'] = "Specify the command to invoke molpro. \
 The default is '{}'.\n".format(conf_defaults['molpro_exe'])
 
+docstring['molcas_exe'] = "Specify the command to invoke molcas. \
+The default is '{}'.\n".format(conf_defaults['molpro_exe'])
+
 docstring['title'] = "The title to be printed in input and output.\n"
 
 docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
