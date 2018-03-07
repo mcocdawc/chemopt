@@ -11,14 +11,11 @@ from chemopt.utilities._decorators import Substitution
 
 values = {}
 values['hamiltonian'] = {'RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)'}
-values['calculation_type'] = {
-    'Single Point', 'Equilibrium Geometry', 'Frequencies'}
 values['backend'] = {'molpro', 'molcas'}
 
 fixed_defaults = {}
 fixed_defaults['charge'] = 0
 fixed_defaults['multiplicity'] = 1
-fixed_defaults['calculation_type'] = 'Single Point'
 fixed_defaults['forces'] = False
 fixed_defaults['wfn_symmetry'] = 1
 fixed_defaults['title'] = ''
@@ -37,7 +34,7 @@ def _give_default_file_path():
 def provide_defaults():
     settings = {}
     settings['defaults'] = {}
-    settings['defaults']['backend'] = 'molpro'
+    settings['defaults']['backend'] = 'molcas'
     settings['defaults']['num_procs'] = 1
     settings['defaults']['num_threads'] = 1
     settings['defaults']['mem_per_proc'] = '150Mb'
@@ -137,8 +134,6 @@ electronic energy. The allowed values are {}.\n".format(values['hamiltonian'])
 
 docstring['basis'] = "The basis set to use for calculating \
 the electronic energy."
-
-docstring['calculation_type'] = get_docstr('calculation_type', fixed_defaults)
 
 docstring['multiplicity'] = "The spin multiplicity. \
 The default is {}.\n".format(fixed_defaults['multiplicity'])

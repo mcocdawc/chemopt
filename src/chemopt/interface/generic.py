@@ -2,7 +2,7 @@ from chemopt import export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 
-from chemopt.interface import molpro
+from chemopt.interface import molpro, molcas
 
 
 @export
@@ -10,7 +10,6 @@ from chemopt.interface import molpro
 def calculate(molecule, hamiltonian, basis,
               el_calc_input=None, backend=None,
               charge=fixed_defaults['charge'],
-              calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
               title=fixed_defaults['title'],
               multiplicity=fixed_defaults['multiplicity'],
@@ -25,7 +24,6 @@ def calculate(molecule, hamiltonian, basis,
         el_calc_input (str): {el_calc_input}
         backend (str): {backend}
         charge (int): {charge}
-        calculation_type (str): Currently only 'Single Point' allowed.
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
@@ -42,7 +40,13 @@ def calculate(molecule, hamiltonian, basis,
         return molpro.calculate(
             el_calc_input=el_calc_input, molecule=molecule,
             hamiltonian=hamiltonian, basis=basis, charge=charge,
-            calculation_type=calculation_type, forces=forces, title=title,
+            forces=forces, title=title,
+            multiplicity=multiplicity)
+    elif backend == 'molcas':
+        return molcas.calculate(
+            el_calc_input=el_calc_input, molecule=molecule,
+            hamiltonian=hamiltonian, basis=basis, charge=charge,
+            forces=forces, title=title,
             multiplicity=multiplicity)
     else:
         raise ValueError('Backend {} is not implemented.'.format(backend))

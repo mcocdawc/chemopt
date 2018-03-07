@@ -19,7 +19,6 @@ from chemopt.constants import conv_factor
 def calculate(molecule, hamiltonian, basis, molpro_exe=None,
               el_calc_input=None,
               charge=fixed_defaults['charge'],
-              calculation_type=fixed_defaults['calculation_type'],
               forces=fixed_defaults['forces'],
               title=fixed_defaults['title'],
               multiplicity=fixed_defaults['multiplicity'],
@@ -35,7 +34,6 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
         charge (int): {charge}
-        calculation_type (str): Currently only 'Single Point' allowed.
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
@@ -64,7 +62,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
     input_str = generate_input_file(
         molecule=molecule,
         hamiltonian=hamiltonian, basis=basis, charge=charge,
-        calculation_type=calculation_type, forces=forces,
+        forces=forces,
         title=title, multiplicity=multiplicity,
         wfn_symmetry=wfn_symmetry)
 
@@ -137,7 +135,6 @@ def parse_output(output_path):
 @substitute_docstr
 def generate_input_file(molecule, hamiltonian, basis,
                         charge=fixed_defaults['charge'],
-                        calculation_type=fixed_defaults['calculation_type'],
                         forces=fixed_defaults['forces'],
                         title=fixed_defaults['title'],
                         multiplicity=fixed_defaults['multiplicity'],
@@ -151,7 +148,6 @@ def generate_input_file(molecule, hamiltonian, basis,
         hamiltonian (str): {hamiltonian}
         basis (str): {basis}
         charge (int): {charge}
-        calculation_type (str): {calculation_type}
         forces (bool): {forces}
         title (str): {title}
         multiplicity (int): {multiplicity}
@@ -181,7 +177,6 @@ geometry = {{
 
 {hamiltonian_str}
 {forces}
-{calculation_type}
 ---
 """.format
 
@@ -193,7 +188,6 @@ geometry = {{
                      geometry=molecule.to_xyz(sort_index=False),
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
-                     calculation_type=_get_calculation_type(calculation_type),
                      memory=_get_molpro_mem(DataSize(mem_per_proc)))
     return out
 
@@ -218,19 +212,6 @@ def _get_hamiltonian_str(hamiltonian, num_e, wfn_symmetry, multiplicity):
             raise ValueError('Unhandled hamiltonian: {}'.format(hamiltonian))
         hamiltonian_str += '{{{}\n{}}}'.format(hamiltonian_key, wfn)
     return hamiltonian_str
-
-
-def _get_calculation_type(calculation_type):
-    calc_str = ''
-    if calculation_type == 'Single Point':
-        pass
-    elif calculation_type == 'Equilibrium Geometry':
-        calc_str = '{optg}\n'
-    elif calculation_type == 'Frequencies':
-        calc_str = '{optg}\n{frequencies}'
-    else:
-        raise ValueError('Unhandled calculation type: %s' % calculation_type)
-    return calc_str
 
 
 def _get_molpro_mem(byte):

@@ -60,7 +60,7 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
         raise ValueError('el_calc_input has to be provided when executing '
                          'from an interactive session.')
     if el_calc_input is None:
-        el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
+        el_calc_input = f'{splitext(inspect.stack()[-1][1])[0]}.inp'
 
     input_str = generate_input_file(
         molecule=molecule,
