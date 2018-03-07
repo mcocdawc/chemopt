@@ -1,7 +1,7 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, normpath, splitext
+from os.path import basename, normpath, splitext, join
 
 import chemcoord as cc
 import numpy as np
@@ -22,7 +22,7 @@ from chemopt.interface.generic import calculate
 @substitute_docstr
 def optimise(zmolecule, hamiltonian, basis,
              symbols=None,
-             md_out=None, el_calc_input=None, molden_out=None,
+             md_out=None, el_calc_dir=None, molden_out=None,
              etol=fixed_defaults['etol'],
              gtol=fixed_defaults['gtol'],
              max_iter=fixed_defaults['max_iter'],
@@ -44,7 +44,7 @@ def optimise(zmolecule, hamiltonian, basis,
             An example is: ``[(r, 1.1), (alpha, 120)]``.
             Has exactly the same format as the multi-parameter substitution
             in sympy.
-        el_calc_input (str): Specify the input filename for electronic
+        el_calc_dir (str): Specify the input filename for electronic
             calculations. If it is None, the filename of the calling
             python script is used (With the suffix ``.inp`` instead of ``.py``)
             and the files for the electronic calculations will reside in their
@@ -83,12 +83,12 @@ def optimise(zmolecule, hamiltonian, basis,
         the following keys are available:
 
         * 'symbols': A list of tuples containing the symbol and its value.
-        
+
     """
-    files = _get_default_filepaths(md_out, molden_out, el_calc_input)
+    files = _get_default_filepaths(md_out, molden_out, el_calc_dir)
     for filepath in files:
         rename_existing(filepath)
-    md_out, molden_out, el_calc_input = files
+    md_out, molden_out, el_calc_dir = files
 
     if num_procs is None:
         num_procs = conf_defaults['num_procs']
@@ -106,7 +106,7 @@ def optimise(zmolecule, hamiltonian, basis,
         with open(md_out, 'w') as f:
             f.write(header)
         calculated, convergence = _zmat_generic_optimise(
-            zmolecule=zmolecule, el_calc_input=el_calc_input,
+            zmolecule=zmolecule, el_calc_dir=el_calc_dir,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
@@ -121,7 +121,7 @@ def optimise(zmolecule, hamiltonian, basis,
         with open(md_out, 'w') as f:
             f.write(header)
         calculated, convergence = _zmat_symb_optimise(
-            zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
+            zmolecule=zmolecule, symbols=symbols, el_calc_dir=el_calc_dir,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
@@ -151,19 +151,29 @@ def optimise(zmolecule, hamiltonian, basis,
 
 
 def _zmat_generic_optimise(
-        zmolecule, el_calc_input, md_out, backend, hamiltonian, basis, charge,
+        zmolecule, el_calc_dir, md_out, backend, hamiltonian, basis, charge,
         title, multiplicity, etol, gtol, max_iter,
         num_procs, mem_per_proc, **kwargs):
     def _get_C_rad(zmolecule):
         C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
         C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
         return C_rad.flatten(order='F')
-    V = _get_generic_opt_V(
-        zmolecule=zmolecule, el_calc_input=el_calc_input,
-        md_out=md_out, backend=backend, hamiltonian=hamiltonian,
-        basis=basis, charge=charge, title=title, multiplicity=multiplicity,
-        etol=etol, gtol=gtol, max_iter=max_iter,
-        num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+    if backend == 'molcas':
+        V = _get_generic_opt_V_molcas(
+            zmolecule=zmolecule, el_calc_dir=el_calc_dir,
+            md_out=md_out, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+    elif backend == 'molpro':
+        V = _get_generic_opt_V_molpro(
+            zmolecule=zmolecule, el_calc_dir=el_calc_dir,
+            md_out=md_out, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
     try:
         opt = minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS',
                        options={'gtol': 1e-10})
@@ -180,12 +190,12 @@ def _zmat_generic_optimise(
 
 
 def _zmat_symb_optimise(
-        zmolecule, symbols, el_calc_input, md_out, backend,
+        zmolecule, symbols, el_calc_dir, md_out, backend,
         hamiltonian, basis, charge,
         title, multiplicity, etol, gtol, max_iter,
         num_procs, mem_per_proc, **kwargs):
     V = _get_symbolic_opt_V(
-        zmolecule=zmolecule, symbols=symbols, el_calc_input=el_calc_input,
+        zmolecule=zmolecule, symbols=symbols, el_calc_dir=el_calc_dir,
         md_out=md_out, backend=backend, hamiltonian=hamiltonian,
         basis=basis, charge=charge, title=title, multiplicity=multiplicity,
         etol=etol, gtol=gtol, max_iter=max_iter,
@@ -204,8 +214,72 @@ def _zmat_symb_optimise(
     return calculated, convergence
 
 
-def _get_generic_opt_V(
-        zmolecule, el_calc_input, md_out, backend,
+def _get_generic_opt_V_molcas(
+        zmolecule, el_calc_dir, md_out,
+        hamiltonian, basis, charge, title, multiplicity,
+        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+    def get_new_zmat(C_rad, previous_zmat):
+        C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
+        C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
+
+        new_zm = previous_zmat.copy()
+        new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
+        return new_zm
+
+    base = splitext(basename(inspect.stack()[-1][1]))[0]
+    def input_path(n):
+        return join(el_calc_dir, '{}_{:03d}.inp'.format(base, n))
+
+    def start_orb_path(n):
+        if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
+            return join(el_calc_dir, '{}_{}.ScfOrb'.format(base, n))
+        elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
+            return join(el_calc_dir, '{}_{}.RasOrb'.format(base, n))
+
+    def V(C_rad=None, get_calculated=False,
+          calculated=[]):  # pylint:disable=dangerous-default-value
+        if get_calculated:
+            return calculated
+        elif C_rad is not None:
+            try:
+                previous_zmat = calculated[-1]['structure'].copy()
+            except IndexError:
+                new_zmat = zmolecule.copy()
+            else:
+                new_zmat = get_new_zmat(C_rad, previous_zmat)
+
+            result = calculate(
+                molecule=new_zmat, forces=True,
+                el_calc_input=input_path(len(calculated) + 1),
+                start_orb=start_orb_path(len(calculated)) if calculated else None,
+                backend='molcas', hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+            energy, grad_energy_X = result['energy'], result['gradient']
+            grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
+
+            new_zmat.metadata['energy'] = energy
+            new_zmat.metadata['grad_energy'] = grad_energy_C
+            calculated.append({'energy': energy, 'grad_energy': grad_energy_C,
+                               'structure': new_zmat})
+            with open(md_out, 'a') as f:
+                f.write(_get_table_row(calculated, grad_energy_X))
+
+            if is_converged(calculated, grad_energy_X, etol=etol, gtol=gtol):
+                raise ConvergenceFinished(successful=True)
+            elif len(calculated) >= max_iter:
+                raise ConvergenceFinished(successful=False)
+
+            return energy, grad_energy_C.flatten()
+        else:
+            raise ValueError
+    return V
+
+
+def _get_generic_opt_V_molpro(
+        zmolecule, el_calc_dir, md_out,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     def get_new_zmat(C_rad, previous_zmat):
@@ -229,8 +303,8 @@ def _get_generic_opt_V(
                 new_zmat = get_new_zmat(C_rad, previous_zmat)
 
             result = calculate(
-                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
-                backend=backend, hamiltonian=hamiltonian, basis=basis,
+                molecule=new_zmat, forces=True, el_calc_dir=el_calc_dir,
+                backend='molpro', hamiltonian=hamiltonian, basis=basis,
                 charge=charge, title=title,
                 multiplicity=multiplicity,
                 num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
@@ -257,7 +331,7 @@ def _get_generic_opt_V(
 
 
 def _get_symbolic_opt_V(
-        zmolecule, symbols, el_calc_input, md_out, backend,
+        zmolecule, symbols, el_calc_dir, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
     # Because substitution has a sideeffect on self
@@ -622,7 +696,7 @@ def is_converged(calculated, grad_energy_X=None,
             return abs(delta_energy) < etol and abs(grad_energy_X).max() < gtol
 
 
-def _get_default_filepaths(md_out, molden_out, el_calc_input):
+def _get_default_filepaths(md_out, molden_out, el_calc_dir):
     if __name__ == '__main__':
         if md_out is None:
             raise ValueError('md_out has to be provided when executing '
@@ -630,8 +704,8 @@ def _get_default_filepaths(md_out, molden_out, el_calc_input):
         if molden_out is None:
             raise ValueError('molden_out has to be provided when executing '
                              'from an interactive session.')
-        if el_calc_input is None:
-            raise ValueError('el_calc_input has to be provided when executing '
+        if el_calc_dir is None:
+            raise ValueError('el_calc_dir has to be provided when executing '
                              'from an interactive session.')
     else:
         base = splitext(basename(inspect.stack()[-1][1]))[0]
@@ -639,7 +713,6 @@ def _get_default_filepaths(md_out, molden_out, el_calc_input):
             md_out = '{}.md'.format(base)
         if molden_out is None:
             molden_out = '{}.molden'.format(base)
-        if el_calc_input is None:
-            el_calc_input = os.path.join('{}_el_calcs'.format(base),
-                                         '{}.inp'.format(base))
-        return md_out, molden_out, el_calc_input
+        if el_calc_dir is None:
+            el_calc_dir = '{}_el_calcs'.format(base)
+        return md_out, molden_out, el_calc_dir

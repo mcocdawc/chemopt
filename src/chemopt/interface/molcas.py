@@ -5,7 +5,8 @@ import subprocess
 from functools import partial
 from io import StringIO
 from itertools import islice
-from os.path import splitext
+from os import makedirs
+from os.path import splitext, join, dirname, basename
 from subprocess import run
 
 import chemcoord as cc
@@ -15,6 +16,7 @@ from datasize import DataSize
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.constants import conv_factor
+from chemopt.utilities._path import cd
 
 
 @substitute_docstr
@@ -74,17 +76,16 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
 
     input_path = el_calc_input
     output_path = '{}.log'.format(splitext(input_path)[0])
-    dirname = os.path.dirname(input_path)
-    if dirname != '':
-        os.makedirs(dirname, exist_ok=True)
+    if dirname(input_path):
+        makedirs(dirname(input_path), exist_ok=True)
     with open(input_path, 'w') as f:
         f.write(input_str)
 
     my_env = os.environ.copy()
     my_env['MOLCAS_NPROCS'] = str(num_procs)
     my_env['MOLCAS_MEM'] = str(DataSize(mem_per_proc) / 1e6)
-    run([molcas_exe, '-f', input_path], env=my_env, stdout=subprocess.PIPE)
-
+    with cd(dirname(el_calc_input) if dirname(el_calc_input) else '.'):
+        run([molcas_exe, '-f', basename(input_path)], env=my_env, stdout=subprocess.PIPE)
     return parse_output(output_path)
 
 
