@@ -29,6 +29,17 @@ Generic Interface
 
     calculate
 
+Molcas Interface
+------------------
+
+.. currentmodule:: chemopt.interface.molcas
+
+.. autosummary::
+    :toctree: src_interface_molcas
+
+    calculate
+    generate_input_file
+    parse_output
 
 Molpro Interface
 ------------------

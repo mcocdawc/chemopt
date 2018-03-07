@@ -83,6 +83,7 @@ def optimise(zmolecule, hamiltonian, basis,
         the following keys are available:
 
         * 'symbols': A list of tuples containing the symbol and its value.
+        
     """
     files = _get_default_filepaths(md_out, molden_out, el_calc_input)
     for filepath in files:
