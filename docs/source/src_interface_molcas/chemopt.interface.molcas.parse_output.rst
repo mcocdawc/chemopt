@@ -1,4 +1,4 @@
-chemopt\.interface\.molcas\.parse\_output
+parse\_output
 =========================================
 
 .. currentmodule:: chemopt.interface.molcas

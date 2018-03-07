@@ -1,4 +1,4 @@
-chemopt\.interface\.molcas\.generate\_input\_file
+generate\_input\_file
 =================================================
 
 .. currentmodule:: chemopt.interface.molcas

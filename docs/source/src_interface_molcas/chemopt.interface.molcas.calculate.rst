@@ -1,4 +1,4 @@
-chemopt\.interface\.molcas\.calculate
+calculate
 =====================================
 
 .. currentmodule:: chemopt.interface.molcas
