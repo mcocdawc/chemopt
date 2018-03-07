@@ -60,7 +60,7 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
         raise ValueError('el_calc_input has to be provided when executing '
                          'from an interactive session.')
     if el_calc_input is None:
-        el_calc_input = f'{splitext(inspect.stack()[-1][1])[0]}.inp'
+        el_calc_input = '{}.inp'.format(splitext(inspect.stack()[-1][1])[0])
 
     input_str = generate_input_file(
         molecule=molecule,
@@ -72,7 +72,7 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
         )
 
     input_path = el_calc_input
-    output_path = f'{splitext(input_path)[0]}.log'
+    output_path = '{}.log'.format(splitext(input_path)[0])
     dirname = os.path.dirname(input_path)
     if dirname != '':
         os.makedirs(dirname, exist_ok=True)
@@ -193,7 +193,7 @@ def generate_input_file(molecule, hamiltonian, basis,
 
     out = get_output(
         title=title, basis=basis, geometry=molecule.to_xyz(sort_index=False),
-        sym_group='' if sym_group is None else f'group = {sym_group}',
+        sym_group='' if sym_group is None else 'group = {}'.format(sym_group),
         hamiltonian_str=_get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb),
         forces='&ALASKA' if forces else '')
     return out
@@ -203,17 +203,17 @@ def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb):
     if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
         if start_orb is not None:
             raise ValueError('Start Orb currently not supported.')
-        H_str = f'&SCF\n Charge = {charge}\n Spin = {multiplicity}\n'
+        H_str = '&SCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
         if hamiltonian == 'B3LYP':
-            H_str += f' KSDFT=B3LYP\n'
+            H_str += ' KSDFT=B3LYP\n'
     elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
-        H_str = f'&RASSCF\n Charge = {charge}\n Spin = {multiplicity}\n'
+        H_str = '&RASSCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
         if start_orb is not None:
-            H_str += f' INPORB = {start_orb}\n'
+            H_str += ' INPORB = {}\n'.format(start_orb)
         if hamiltonian == 'CASPT2':
             H_str += '\n&CASPT2\n'
     else:
-        raise ValueError(f'Unhandled hamiltonian: {hamiltonian}')
+        raise ValueError('Unhandled hamiltonian: {}'.format(hamiltonian))
     return H_str
 
 
