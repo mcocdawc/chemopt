@@ -10,13 +10,10 @@ from warnings import warn
 from chemopt.utilities._decorators import Substitution
 
 values = {}
-values['basis'] = ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
-                   '6-31+G(d)', '6-311G(d)', 'cc-pVDZ', 'cc-pVTZ',
-                   'AUG-cc-pVDZ', 'AUG-cc-pVTZ']
-values['hamiltonian'] = ['RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)']
-values['calculation_type'] = [
-    'Single Point', 'Equilibrium Geometry', 'Frequencies']
-values['backend'] = {'molpro'}
+values['hamiltonian'] = {'RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)'}
+values['calculation_type'] = {
+    'Single Point', 'Equilibrium Geometry', 'Frequencies'}
+values['backend'] = {'molpro', 'molcas'}
 
 fixed_defaults = {}
 fixed_defaults['charge'] = 0
@@ -45,6 +42,7 @@ def provide_defaults():
     settings['defaults']['num_threads'] = 1
     settings['defaults']['mem_per_proc'] = '150Mb'
     settings['defaults']['molpro_exe'] = 'molpro'
+    settings['defaults']['molcas_exe'] = 'molcas'
     return settings
 
 
@@ -138,7 +136,7 @@ docstring['hamiltonian'] = "The hamiltonian to use for calculating the \
 electronic energy. The allowed values are {}.\n".format(values['hamiltonian'])
 
 docstring['basis'] = "The basis set to use for calculating \
-the electronic energy. The allowed values are {}.\n".format(values['basis'])
+the electronic energy."
 
 docstring['calculation_type'] = get_docstr('calculation_type', fixed_defaults)
 
@@ -177,9 +175,12 @@ docstring['molpro_exe'] = "Specify the command to invoke molpro. \
 The default is '{}'.\n".format(conf_defaults['molpro_exe'])
 
 docstring['molcas_exe'] = "Specify the command to invoke molcas. \
-The default is '{}'.\n".format(conf_defaults['molpro_exe'])
+The default is '{}'.\n".format(conf_defaults['molcas_exe'])
 
 docstring['title'] = "The title to be printed in input and output.\n"
+
+docstring['start_orb'] = "Path to an orbital file, \
+if starting orbitals should be used."
 
 docstring['wfn_symmetry'] = "The symmetry of the wavefunction specified \
 with the molpro \

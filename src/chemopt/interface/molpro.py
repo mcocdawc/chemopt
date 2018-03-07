@@ -140,7 +140,7 @@ def generate_input_file(molecule, hamiltonian, basis,
                         calculation_type=fixed_defaults['calculation_type'],
                         forces=fixed_defaults['forces'],
                         title=fixed_defaults['title'],
-                        multiplicity=fixed_defaults['title'],
+                        multiplicity=fixed_defaults['multiplicity'],
                         wfn_symmetry=fixed_defaults['wfn_symmetry'],
                         mem_per_proc=None):
     """Generate a molpro input file.
@@ -189,32 +189,13 @@ geometry = {{
         hamiltonian, molecule.get_electron_number(charge),
         wfn_symmetry, multiplicity)
 
-    out = get_output(title=title, basis_str=_get_basis_str(basis),
+    out = get_output(title=title, basis_str=basis,
                      geometry=molecule.to_xyz(sort_index=False),
                      hamiltonian_str=hamiltonian_str,
                      forces='forces' if forces else '',
                      calculation_type=_get_calculation_type(calculation_type),
                      memory=_get_molpro_mem(DataSize(mem_per_proc)))
     return out
-
-
-def _get_basis_str(basis):
-    """Convert to code-specific strings
-    """
-    if basis in ['STO-3G', '3-21G', '6-31G', '6-31G(d)', '6-31G(d,p)',
-                 '6-31+G(d)', '6-311G(d)']:
-        basis_str = basis
-    elif basis == 'cc-pVDZ':
-        basis_str = 'vdz'
-    elif basis == 'cc-pVTZ':
-        basis_str = 'vtz'
-    elif basis == 'AUG-cc-pVDZ':
-        basis_str = 'avdz'
-    elif basis == 'AUG-cc-pVTZ':
-        basis_str = 'avtz'
-    else:
-        raise ValueError('Unhandled basis type: {}'.format(basis))
-    return basis_str
 
 
 def _get_wavefn_str(num_e, wfn_symmetry, multiplicity):
