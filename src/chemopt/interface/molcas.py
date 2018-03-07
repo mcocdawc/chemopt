@@ -141,9 +141,12 @@ def parse_output(output_path):
                 output['gradient'] = read_gradient(f, len(molecule))
             line = f.readline()
 
-    for key in output:
-        molecule.metadata[key] = output[key]
-    output['structure'] = molecule
+    try:
+        for key in output:
+            molecule.metadata[key] = output[key]
+        output['structure'] = molecule
+    except UnboundLocalError:
+        pass
     return output
 
 
