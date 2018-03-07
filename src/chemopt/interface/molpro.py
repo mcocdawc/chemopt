@@ -31,6 +31,7 @@ def calculate(molecule, hamiltonian, basis, molpro_exe=None,
         molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
             If it is a string, it has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
+            But 'RASSCF' and 'CASPT2' not yet implemented.
         basis (str): {basis}
         molpro_exe (str): {molpro_exe}
         charge (int): {charge}

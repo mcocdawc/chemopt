@@ -34,6 +34,7 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
         molecule (chemcoord.Cartesian or chemcoord.Zmat or str):
             If it is a string, it has to be a valid xyz-file.
         hamiltonian (str): {hamiltonian}
+            But 'CCSD' and 'CCSD(T)' are not yet implemented.
         basis (str): {basis}
         molcas_exe (str): {molcas_exe}
         charge (int): {charge}
@@ -81,7 +82,7 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
 
     my_env = os.environ.copy()
     my_env['MOLCAS_NPROCS'] = str(num_procs)
-    my_env['MOLCAS_MEM'] = str(mem_per_proc)
+    my_env['MOLCAS_MEM'] = str(DataSize(mem_per_proc) / 1e6)
     run([molcas_exe, '-f', input_path], env=my_env, stdout=subprocess.PIPE)
 
     return parse_output(output_path)
@@ -215,7 +216,3 @@ def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb):
     else:
         raise ValueError('Unhandled hamiltonian: {}'.format(hamiltonian))
     return H_str
-
-
-def _get_molcas_mem(byte):
-    return byte / 1e6

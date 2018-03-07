@@ -10,7 +10,8 @@ from warnings import warn
 from chemopt.utilities._decorators import Substitution
 
 values = {}
-values['hamiltonian'] = {'RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)'}
+values['hamiltonian'] = {'RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)',
+                         'RASSCF', 'CASPT2'}
 values['backend'] = {'molpro', 'molcas'}
 
 fixed_defaults = {}
@@ -193,7 +194,7 @@ docstring['num_procs'] = "The number of processes to spawn."
 docstring['num_threads'] = "Currently not Implemented"
 
 docstring['mem_per_proc'] = "Memory per process. \
-This is a string with a number and a unit like '800 Mb'. \
+This is a string with a number and a unit like '800 MB'. \
 SI and binary prefixes are supported. \
 Uses the  `datasize library <https://pypi.python.org/pypi/datasize>`_ \
 for parsing."
