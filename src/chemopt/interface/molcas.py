@@ -209,7 +209,7 @@ def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb, el_calc_i
             '$CurrDir',
             relpath(dirname(start_orb), dirname(el_calc_input)),
             basename(start_orb)))
-    if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
+    if hamiltonian == 'SCF' or hamiltonian == 'B3LYP':
         if start_orb is not None:
             H_str = '>COPY {} $WorkDir/INPORB\n'.format(start_orb_path)
         else:

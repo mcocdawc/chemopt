@@ -10,7 +10,7 @@ from warnings import warn
 from chemopt.utilities._decorators import Substitution
 
 values = {}
-values['hamiltonian'] = {'RHF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)',
+values['hamiltonian'] = {'SCF', 'MP2', 'B3LYP', 'CCSD', 'CCSD(T)',
                          'RASSCF', 'CASPT2'}
 values['backend'] = {'molpro', 'molcas'}
 

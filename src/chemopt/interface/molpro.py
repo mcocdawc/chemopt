@@ -206,7 +206,7 @@ def _get_hamiltonian_str(hamiltonian, num_e, wfn_symmetry, multiplicity):
     if hamiltonian != 'B3LYP':
         hamiltonian_str += '{{rhf\n{wfn}}}'.format(wfn=wfn)
     # Intentionally not using elif here:
-    if hamiltonian != 'RHF':
+    if hamiltonian != 'SCF':
         hamiltonian_key = ''
         if hamiltonian in ['MP2', 'CCSD', 'CCSD(T)']:
             hamiltonian_key = hamiltonian.lower()
