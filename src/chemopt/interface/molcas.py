@@ -6,7 +6,7 @@ from functools import partial
 from io import StringIO
 from itertools import islice
 from os import makedirs
-from os.path import splitext, join, dirname, basename
+from os.path import splitext, join, dirname, basename, relpath, normpath
 from subprocess import run
 
 import chemcoord as cc
@@ -15,7 +15,6 @@ from datasize import DataSize
 
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
-from chemopt.constants import conv_factor
 from chemopt.utilities._path import cd
 
 
@@ -68,24 +67,24 @@ def calculate(molecule, hamiltonian, basis, molcas_exe=None,
     input_str = generate_input_file(
         molecule=molecule,
         hamiltonian=hamiltonian, basis=basis, charge=charge,
+        el_calc_input=el_calc_input,
         forces=forces,
         sym_group=sym_group,
         title=title, multiplicity=multiplicity,
         start_orb=start_orb,
         )
 
-    input_path = el_calc_input
-    output_path = '{}.log'.format(splitext(input_path)[0])
-    if dirname(input_path):
-        makedirs(dirname(input_path), exist_ok=True)
-    with open(input_path, 'w') as f:
+    output_path = '{}.log'.format(splitext(el_calc_input)[0])
+    if dirname(el_calc_input):
+        makedirs(dirname(el_calc_input), exist_ok=True)
+    with open(el_calc_input, 'w') as f:
         f.write(input_str)
 
     my_env = os.environ.copy()
     my_env['MOLCAS_NPROCS'] = str(num_procs)
     my_env['MOLCAS_MEM'] = str(DataSize(mem_per_proc) / 1e6)
     with cd(dirname(el_calc_input) if dirname(el_calc_input) else '.'):
-        run([molcas_exe, '-f', basename(input_path)], env=my_env, stdout=subprocess.PIPE)
+        run([molcas_exe, '-f', basename(el_calc_input)], env=my_env, stdout=subprocess.PIPE)
     return parse_output(output_path)
 
 
@@ -152,7 +151,7 @@ def parse_output(output_path):
 
 
 @substitute_docstr
-def generate_input_file(molecule, hamiltonian, basis,
+def generate_input_file(molecule, hamiltonian, basis, el_calc_input,
                         charge=fixed_defaults['charge'],
                         forces=fixed_defaults['forces'],
                         title=fixed_defaults['title'],
@@ -199,24 +198,29 @@ def generate_input_file(molecule, hamiltonian, basis,
     out = get_output(
         title=title, basis=basis, geometry=molecule.to_xyz(sort_index=False),
         sym_group='' if sym_group is None else 'group = {}'.format(sym_group),
-        hamiltonian_str=_get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb),
+        hamiltonian_str=_get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb, el_calc_input),
         forces='&ALASKA' if forces else '')
     return out
 
 
-def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb):
+def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb, el_calc_input):
+    if start_orb is not None:
+        start_orb_path = normpath(join(
+            '$CurrDir',
+            relpath(dirname(start_orb), dirname(el_calc_input)),
+            basename(start_orb)))
     if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
         if start_orb is not None:
-            pass
-            # TODO implement
-            # raise ValueError('Start Orb currently not supported.')
-        H_str = '&SCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
+            H_str = '>COPY {} $WorkDir/INPORB\n'.format(start_orb_path)
+        else:
+            H_str = ''
+        H_str += '&SCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
         if hamiltonian == 'B3LYP':
             H_str += ' KSDFT=B3LYP\n'
     elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
         H_str = '&RASSCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
         if start_orb is not None:
-            H_str += ' INPORB = {}\n'.format(start_orb)
+            H_str += ' INPORB = {}\n'.format(start_orb_path)
         if hamiltonian == 'CASPT2':
             H_str += '\n&CASPT2\n'
     else:

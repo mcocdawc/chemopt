@@ -17,7 +17,6 @@ from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.exception import ConvergenceFinished
 from chemopt.interface import molcas, molpro
-from chemopt.interface.generic import calculate
 
 
 @export
@@ -248,9 +247,9 @@ def _get_generic_opt_V_molcas(
 
     def start_orb_path(n):
         if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
-            return join(el_calc_dir, '{}_{}.ScfOrb'.format(base, n))
+            return join(el_calc_dir, '{}_{:03d}.ScfOrb'.format(base, n))
         elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
-            return join(el_calc_dir, '{}_{}.RasOrb'.format(base, n))
+            return join(el_calc_dir, '{}_{:03d}.RasOrb'.format(base, n))
 
     def V(C_rad=None, calculated=[]):  # pylint:disable=dangerous-default-value
         try:
@@ -450,9 +449,9 @@ def _get_symbolic_opt_V_molcas(
 
     def start_orb_path(n):
         if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
-            return join(el_calc_dir, '{}_{}.ScfOrb'.format(base, n))
+            return join(el_calc_dir, '{}_{:03d}.ScfOrb'.format(base, n))
         elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
-            return join(el_calc_dir, '{}_{}.RasOrb'.format(base, n))
+            return join(el_calc_dir, '{}_{:03d}.RasOrb'.format(base, n))
 
     def V(values=None):  # pylint:disable=dangerous-default-value
         if hasattr(V, "counter"):
