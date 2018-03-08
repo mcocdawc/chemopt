@@ -1,7 +1,8 @@
 import inspect
 import os
 from datetime import datetime
-from os.path import basename, normpath, splitext, join
+from os.path import basename, isfile, join, normpath, splitext
+from time import sleep
 
 import chemcoord as cc
 import numpy as np
@@ -15,6 +16,7 @@ from chemopt import __version__, export
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.exception import ConvergenceFinished
+from chemopt.interface import molcas, molpro
 from chemopt.interface.generic import calculate
 
 
@@ -31,6 +33,7 @@ def optimise(zmolecule, hamiltonian, basis,
              title=fixed_defaults['title'],
              multiplicity=fixed_defaults['multiplicity'],
              num_procs=None, mem_per_proc=None,
+             start_orb=None,
              coord_fmt=fixed_defaults['coord_fmt'],
              **kwargs):
     """Optimize a molecule.
@@ -60,6 +63,7 @@ def optimise(zmolecule, hamiltonian, basis,
         max_iter (int): {max_iter}
         num_procs (int): {num_procs}
         mem_per_proc (str): {mem_per_proc}
+        start_orb (str): {start_orb}
         coord_fmt (str): {coord_fmt}
 
     Returns:
@@ -110,7 +114,7 @@ def optimise(zmolecule, hamiltonian, basis,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
-            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            num_procs=num_procs, mem_per_proc=mem_per_proc, start_orb=start_orb, **kwargs)
     else:
         header = _get_symb_optimise_header(
             zmolecule=zmolecule, symbols=symbols, backend=backend,
@@ -125,7 +129,8 @@ def optimise(zmolecule, hamiltonian, basis,
             md_out=md_out, backend=backend, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
-            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            num_procs=num_procs, mem_per_proc=mem_per_proc,
+            start_orb=start_orb, **kwargs)
 
     to_molden(
         [x['structure'].get_cartesian() for x in calculated], buf=molden_out)
@@ -153,21 +158,21 @@ def optimise(zmolecule, hamiltonian, basis,
 def _zmat_generic_optimise(
         zmolecule, el_calc_dir, md_out, backend, hamiltonian, basis, charge,
         title, multiplicity, etol, gtol, max_iter,
-        num_procs, mem_per_proc, **kwargs):
+        num_procs, mem_per_proc, start_orb, **kwargs):
     def _get_C_rad(zmolecule):
         C_rad = zmolecule.loc[:, ['bond', 'angle', 'dihedral']].values.T
         C_rad[[1, 2], :] = np.radians(C_rad[[1, 2], :])
         return C_rad.flatten(order='F')
 
     if backend == 'molcas':
-        V = _get_generic_opt_V_molcas(
+        V, grad_V = _get_generic_opt_V_molcas(
             zmolecule=zmolecule, el_calc_dir=el_calc_dir,
             md_out=md_out, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
             etol=etol, gtol=gtol, max_iter=max_iter,
-            num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            num_procs=num_procs, mem_per_proc=mem_per_proc, start_orb=start_orb, **kwargs)
     elif backend == 'molpro':
-        V = _get_generic_opt_V_molpro(
+        V, grad_V = _get_generic_opt_V_molpro(
             zmolecule=zmolecule, el_calc_dir=el_calc_dir,
             md_out=md_out, hamiltonian=hamiltonian,
             basis=basis, charge=charge, title=title, multiplicity=multiplicity,
@@ -175,7 +180,7 @@ def _zmat_generic_optimise(
             num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
     try:
-        opt = minimize(V, x0=_get_C_rad(zmolecule), jac=True, method='BFGS',
+        opt = minimize(V, x0=_get_C_rad(zmolecule), jac=grad_V, method='BFGS',
                        options={'gtol': 1e-10})
     except ConvergenceFinished as e:
         convergence = e
@@ -185,7 +190,7 @@ def _zmat_generic_optimise(
         else:
             convergence = ConvergenceFinished(successful=False)
 
-    calculated = V(get_calculated=True)
+    calculated = grad_V(get_calculated=True)
     return calculated, convergence
 
 
@@ -193,16 +198,24 @@ def _zmat_symb_optimise(
         zmolecule, symbols, el_calc_dir, md_out, backend,
         hamiltonian, basis, charge,
         title, multiplicity, etol, gtol, max_iter,
-        num_procs, mem_per_proc, **kwargs):
-    V = _get_symbolic_opt_V(
-        zmolecule=zmolecule, symbols=symbols, el_calc_dir=el_calc_dir,
-        md_out=md_out, backend=backend, hamiltonian=hamiltonian,
-        basis=basis, charge=charge, title=title, multiplicity=multiplicity,
-        etol=etol, gtol=gtol, max_iter=max_iter,
-        num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+        num_procs, mem_per_proc, start_orb, **kwargs):
+    if backend == 'molcas':
+        V, grad_V = _get_symbolic_opt_V_molcas(
+            zmolecule=zmolecule, symbols=symbols, el_calc_dir=el_calc_dir,
+            md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, start_orb=start_orb, **kwargs)
+    elif backend == 'molpro':
+        V, grad_V = _get_symbolic_opt_V_molpro(
+            zmolecule=zmolecule, symbols=symbols, el_calc_dir=el_calc_dir,
+            md_out=md_out, backend=backend, hamiltonian=hamiltonian,
+            basis=basis, charge=charge, title=title, multiplicity=multiplicity,
+            etol=etol, gtol=gtol, max_iter=max_iter,
+            num_procs=num_procs, mem_per_proc=mem_per_proc, start_orb=start_orb, **kwargs)
     try:
         opt = minimize(V, x0=np.array([v for s, v in symbols], dtype='f8'),
-                       jac=True, method='BFGS', options={'gtol': 1e-10})
+                       jac=grad_V, method='BFGS', options={'gtol': 1e-10})
     except ConvergenceFinished as e:
         convergence = e
     else:
@@ -210,14 +223,14 @@ def _zmat_symb_optimise(
             convergence = ConvergenceFinished(successful=True)
         else:
             convergence = ConvergenceFinished(successful=False)
-    calculated = V(get_calculated=True)
+    calculated = grad_V(get_calculated=True)
     return calculated, convergence
 
 
 def _get_generic_opt_V_molcas(
         zmolecule, el_calc_dir, md_out,
         hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+        etol, gtol, max_iter, num_procs, mem_per_proc, start_orb, **kwargs):
     def get_new_zmat(C_rad, previous_zmat):
         C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
         C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
@@ -230,13 +243,46 @@ def _get_generic_opt_V_molcas(
     def input_path(n):
         return join(el_calc_dir, '{}_{:03d}.inp'.format(base, n))
 
+    def output_path(n):
+        return join(el_calc_dir, '{}_{:03d}.log'.format(base, n))
+
     def start_orb_path(n):
         if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
             return join(el_calc_dir, '{}_{}.ScfOrb'.format(base, n))
         elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
             return join(el_calc_dir, '{}_{}.RasOrb'.format(base, n))
 
-    def V(C_rad=None, get_calculated=False,
+    def V(C_rad=None, calculated=[]):  # pylint:disable=dangerous-default-value
+        try:
+            previous_zmat = calculated[-1].copy()
+        except IndexError:
+            new_zmat = zmolecule.copy()
+        else:
+            new_zmat = get_new_zmat(C_rad, previous_zmat)
+
+        if isfile(input_path(len(calculated))):
+            result = {}
+            while len(result.keys()) < 3:
+                try:
+                    result = molcas.parse_output(output_path(len(calculated)))
+                except FileNotFoundError:
+                    pass
+                sleep(0.5)
+        else:
+            result = molcas.calculate(
+                molecule=new_zmat, forces=True,
+                el_calc_input=input_path(len(calculated)),
+                start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+        calculated.append(new_zmat)
+        return result['energy']
+
+
+    def grad_V(C_rad=None, get_calculated=False,
           calculated=[]):  # pylint:disable=dangerous-default-value
         if get_calculated:
             return calculated
@@ -248,14 +294,23 @@ def _get_generic_opt_V_molcas(
             else:
                 new_zmat = get_new_zmat(C_rad, previous_zmat)
 
-            result = calculate(
-                molecule=new_zmat, forces=True,
-                el_calc_input=input_path(len(calculated) + 1),
-                start_orb=start_orb_path(len(calculated)) if calculated else None,
-                backend='molcas', hamiltonian=hamiltonian, basis=basis,
-                charge=charge, title=title,
-                multiplicity=multiplicity,
-                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            if isfile(input_path(len(calculated))):
+                result = {}
+                while len(result.keys()) < 3:
+                    try:
+                        result = molcas.parse_output(output_path(len(calculated)))
+                    except FileNotFoundError:
+                        pass
+                    sleep(0.5)
+            else:
+                result = molcas.calculate(
+                    molecule=new_zmat, forces=True,
+                    el_calc_input=input_path(len(calculated)),
+                    start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                    hamiltonian=hamiltonian, basis=basis,
+                    charge=charge, title=title,
+                    multiplicity=multiplicity,
+                    num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
             energy, grad_energy_X = result['energy'], result['gradient']
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
@@ -272,16 +327,17 @@ def _get_generic_opt_V_molcas(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
-            return energy, grad_energy_C.flatten()
+            return grad_energy_C.flatten()
         else:
             raise ValueError
-    return V
+
+    return V, grad_V
 
 
 def _get_generic_opt_V_molpro(
         zmolecule, el_calc_dir, md_out,
         hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+        etol, gtol, max_iter, num_procs, mem_per_proc, start_orb, **kwargs):
     def get_new_zmat(C_rad, previous_zmat):
         C_deg = C_rad.copy().reshape((3, len(C_rad) // 3), order='F').T
         C_deg[:, [1, 2]] = np.rad2deg(C_deg[:, [1, 2]])
@@ -290,7 +346,43 @@ def _get_generic_opt_V_molpro(
         new_zm.safe_loc[zmolecule.index, ['bond', 'angle', 'dihedral']] = C_deg
         return new_zm
 
-    def V(C_rad=None, get_calculated=False,
+    base = splitext(basename(inspect.stack()[-1][1]))[0]
+    def input_path(n):
+        return join(el_calc_dir, '{}_{:03d}.inp'.format(base, n))
+
+    def output_path(n):
+        return join(el_calc_dir, '{}_{:03d}.out'.format(base, n))
+
+    def V(C_rad=None, calculated=[]):  # pylint:disable=dangerous-default-value
+        try:
+            previous_zmat = calculated[-1].copy()
+        except IndexError:
+            new_zmat = zmolecule.copy()
+        else:
+            new_zmat = get_new_zmat(C_rad, previous_zmat)
+
+        if isfile(input_path(len(calculated))):
+            result = {}
+            while len(result.keys()) < 3:
+                try:
+                    result = molpro.parse_output(output_path(len(calculated)))
+                except FileNotFoundError:
+                    pass
+                sleep(0.5)
+        else:
+            result = molpro.calculate(
+                molecule=new_zmat, forces=True,
+                el_calc_input=input_path(len(calculated)),
+                hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+        calculated.append(new_zmat)
+        return result['energy']
+
+
+    def grad_V(C_rad=None, get_calculated=False,
           calculated=[]):  # pylint:disable=dangerous-default-value
         if get_calculated:
             return calculated
@@ -302,12 +394,22 @@ def _get_generic_opt_V_molpro(
             else:
                 new_zmat = get_new_zmat(C_rad, previous_zmat)
 
-            result = calculate(
-                molecule=new_zmat, forces=True, el_calc_dir=el_calc_dir,
-                backend='molpro', hamiltonian=hamiltonian, basis=basis,
-                charge=charge, title=title,
-                multiplicity=multiplicity,
-                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            if isfile(input_path(len(calculated))):
+                result = {}
+                while len(result.keys()) < 3:
+                    try:
+                        result = molcas.parse_output(output_path(len(calculated)))
+                    except FileNotFoundError:
+                        pass
+                    sleep(0.5)
+            else:
+                result = molpro.calculate(
+                    molecule=new_zmat, forces=True,
+                    el_calc_input=input_path(len(calculated)),
+                    hamiltonian=hamiltonian, basis=basis,
+                    charge=charge, title=title,
+                    multiplicity=multiplicity,
+                    num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
             energy, grad_energy_X = result['energy'], result['gradient']
             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
@@ -324,22 +426,63 @@ def _get_generic_opt_V_molpro(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
-            return energy, grad_energy_C.flatten()
+            return grad_energy_C.flatten()
         else:
             raise ValueError
-    return V
+
+    return V, grad_V
 
 
-def _get_symbolic_opt_V(
+def _get_symbolic_opt_V_molcas(
         zmolecule, symbols, el_calc_dir, md_out, backend,
         hamiltonian, basis, charge, title, multiplicity,
-        etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+        etol, gtol, max_iter, num_procs, mem_per_proc, start_orb, **kwargs):
     # Because substitution has a sideeffect on self
     zmolecule = zmolecule.copy()
     value_cols = ['bond', 'angle', 'dihedral']
     symbolic_expressions = [s for s, v in symbols]
+    base = splitext(basename(inspect.stack()[-1][1]))[0]
+    def input_path(n):
+        return join(el_calc_dir, '{}_{:03d}.inp'.format(base, n))
 
-    def V(values=None, get_calculated=False,
+    def output_path(n):
+        return join(el_calc_dir, '{}_{:03d}.log'.format(base, n))
+
+    def start_orb_path(n):
+        if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
+            return join(el_calc_dir, '{}_{}.ScfOrb'.format(base, n))
+        elif hamiltonian == 'RASSCF' or hamiltonian == 'CASPT2':
+            return join(el_calc_dir, '{}_{}.RasOrb'.format(base, n))
+
+    def V(values=None):  # pylint:disable=dangerous-default-value
+        if hasattr(V, "counter"):
+            V.counter += 1
+        else:
+            V.counter = 0
+        substitutions = list(zip(symbolic_expressions, values))
+        new_zmat = zmolecule.subs(substitutions)
+
+        if isfile(input_path(V.counter)):
+            result = {}
+            while len(result.keys()) < 3:
+                try:
+                    result = molcas.parse_output(output_path(V.counter))
+                except FileNotFoundError:
+                    pass
+                sleep(0.5)
+        else:
+            result = molcas.calculate(
+                molecule=new_zmat, forces=True,
+                el_calc_input=input_path(V.counter),
+                start_orb=start_orb_path(V.counter - 1) if V.counter else start_orb,
+                hamiltonian=hamiltonian, basis=basis,
+                charge=charge, title=title,
+                multiplicity=multiplicity,
+                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+
+        return result['energy']
+
+    def grad_V(values=None, get_calculated=False,
           calculated=[]):  # pylint:disable=dangerous-default-value
         if get_calculated:
             return calculated
@@ -347,12 +490,23 @@ def _get_symbolic_opt_V(
             substitutions = list(zip(symbolic_expressions, values))
             new_zmat = zmolecule.subs(substitutions)
 
-            result = calculate(
-                molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
-                backend=backend, hamiltonian=hamiltonian, basis=basis,
-                charge=charge, title=title,
-                multiplicity=multiplicity,
-                num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+            if isfile(input_path(len(calculated))):
+                result = {}
+                while len(result.keys()) < 3:
+                    try:
+                        result = molcas.parse_output(output_path(len(calculated)))
+                    except FileNotFoundError:
+                        pass
+                    sleep(0.5)
+            else:
+                result = molcas.calculate(
+                    molecule=new_zmat, forces=True,
+                    el_calc_input=input_path(len(calculated)),
+                    start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                    hamiltonian=hamiltonian, basis=basis,
+                    charge=charge, title=title,
+                    multiplicity=multiplicity,
+                    num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
 
             energy, grad_energy_X = result['energy'], result['gradient']
 
@@ -377,10 +531,65 @@ def _get_symbolic_opt_V(
             elif len(calculated) >= max_iter:
                 raise ConvergenceFinished(successful=False)
 
-            return energy, grad_energy_symb
+            return grad_energy_symb
         else:
             raise ValueError
-    return V
+
+
+
+    return V, grad_V
+
+# def _get_symbolic_opt_V(
+#         zmolecule, symbols, el_calc_dir, md_out, backend,
+#         hamiltonian, basis, charge, title, multiplicity,
+#         etol, gtol, max_iter, num_procs, mem_per_proc, **kwargs):
+#     # Because substitution has a sideeffect on self
+#     zmolecule = zmolecule.copy()
+#     value_cols = ['bond', 'angle', 'dihedral']
+#     symbolic_expressions = [s for s, v in symbols]
+#
+#     def V(values=None, get_calculated=False,
+#           calculated=[]):  # pylint:disable=dangerous-default-value
+#         if get_calculated:
+#             return calculated
+#         elif values is not None:
+#             substitutions = list(zip(symbolic_expressions, values))
+#             new_zmat = zmolecule.subs(substitutions)
+#
+#             result = calculate(
+#                 molecule=new_zmat, forces=True, el_calc_input=el_calc_input,
+#                 backend=backend, hamiltonian=hamiltonian, basis=basis,
+#                 charge=charge, title=title,
+#                 multiplicity=multiplicity,
+#                 num_procs=num_procs, mem_per_proc=mem_per_proc, **kwargs)
+#
+#             energy, grad_energy_X = result['energy'], result['gradient']
+#
+#             grad_energy_C = _get_grad_energy_C(new_zmat, grad_energy_X)
+#             zm_values_rad = zmolecule.loc[:, value_cols].values
+#             zm_values_rad[:, [1, 2]] = sympy.rad(zm_values_rad[:, [1, 2]])
+#             energy_symb = np.sum(zm_values_rad * grad_energy_C)
+#             grad_energy_symb = sympy.Matrix([
+#                 energy_symb.diff(arg) for arg in symbolic_expressions])
+#             grad_energy_symb = np.array(grad_energy_symb.subs(substitutions))
+#             grad_energy_symb = grad_energy_symb.astype('f8').flatten()
+#
+#             new_zmat.metadata['energy'] = energy
+#             new_zmat.metadata['symbols'] = substitutions
+#             calculated.append({'energy': energy, 'structure': new_zmat,
+#                                'symbols': substitutions})
+#             with open(md_out, 'a') as f:
+#                 f.write(_get_table_row(calculated, grad_energy_symb))
+#
+#             if is_converged(calculated, etol=etol):
+#                 raise ConvergenceFinished(successful=True)
+#             elif len(calculated) >= max_iter:
+#                 raise ConvergenceFinished(successful=False)
+#
+#             return energy, grad_energy_symb
+#         else:
+#             raise ValueError
+#     return V
 
 
 def _get_grad_energy_C(zmat, grad_energy_X):

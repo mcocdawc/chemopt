@@ -207,7 +207,9 @@ def generate_input_file(molecule, hamiltonian, basis,
 def _get_hamiltonian_str(hamiltonian, charge, multiplicity, start_orb):
     if hamiltonian == 'RHF' or hamiltonian == 'B3LYP':
         if start_orb is not None:
-            raise ValueError('Start Orb currently not supported.')
+            pass
+            # TODO implement
+            # raise ValueError('Start Orb currently not supported.')
         H_str = '&SCF\n Charge = {}\n Spin = {}\n'.format(charge, multiplicity)
         if hamiltonian == 'B3LYP':
             H_str += ' KSDFT=B3LYP\n'
