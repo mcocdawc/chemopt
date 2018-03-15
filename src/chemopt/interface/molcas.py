@@ -16,6 +16,7 @@ from datasize import DataSize
 from chemopt.configuration import (conf_defaults, fixed_defaults,
                                    substitute_docstr)
 from chemopt.utilities._path import cd
+from chemopt.exception import ElectronicCalculation
 
 
 @substitute_docstr
@@ -139,6 +140,10 @@ def parse_output(output_path):
                 for _ in range(7):
                     f.readline()
                 output['gradient'] = read_gradient(f, len(molecule))
+            elif '-- Stop Module:' in line and '_RC_ALL_IS_WELL_' not in line:
+                message = 'An error happened in the calculation:\n' + line
+                raise ElectronicCalculation(message)
+
             line = f.readline()
 
     try:
