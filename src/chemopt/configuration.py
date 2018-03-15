@@ -38,7 +38,7 @@ def provide_defaults():
     settings['defaults']['backend'] = 'molcas'
     settings['defaults']['num_procs'] = 1
     settings['defaults']['num_threads'] = 1
-    settings['defaults']['mem_per_proc'] = '150Mb'
+    settings['defaults']['mem_per_proc'] = '150MB'
     settings['defaults']['molpro_exe'] = 'molpro'
     settings['defaults']['molcas_exe'] = 'molcas'
     return settings
