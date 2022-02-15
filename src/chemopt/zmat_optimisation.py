@@ -271,7 +271,7 @@ def _get_generic_opt_V_molcas(
             result = molcas.calculate(
                 molecule=new_zmat, forces=True,
                 el_calc_input=input_path(len(calculated)),
-                start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                start_orb=start_orb_path(len(calculated) - 1) if calculated and len(calculated) > 5 else start_orb,
                 hamiltonian=hamiltonian, basis=basis,
                 charge=charge, title=title,
                 multiplicity=multiplicity,
@@ -305,7 +305,7 @@ def _get_generic_opt_V_molcas(
                 result = molcas.calculate(
                     molecule=new_zmat, forces=True,
                     el_calc_input=input_path(len(calculated)),
-                    start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                    start_orb=start_orb_path(len(calculated) - 1) if calculated and len(calculated) > 5 else start_orb,
                     hamiltonian=hamiltonian, basis=basis,
                     charge=charge, title=title,
                     multiplicity=multiplicity,
@@ -473,7 +473,7 @@ def _get_symbolic_opt_V_molcas(
             result = molcas.calculate(
                 molecule=new_zmat, forces=True,
                 el_calc_input=input_path(V.counter),
-                start_orb=start_orb_path(V.counter - 1) if V.counter else start_orb,
+                start_orb=start_orb_path(V.counter - 1) if V.counter and V.counter > 5 else start_orb,
                 hamiltonian=hamiltonian, basis=basis,
                 charge=charge, title=title,
                 multiplicity=multiplicity,
@@ -501,7 +501,7 @@ def _get_symbolic_opt_V_molcas(
                 result = molcas.calculate(
                     molecule=new_zmat, forces=True,
                     el_calc_input=input_path(len(calculated)),
-                    start_orb=start_orb_path(len(calculated) - 1) if calculated else start_orb,
+                    start_orb=start_orb_path(len(calculated) - 1) if calculated and V.counter > 5 else start_orb,
                     hamiltonian=hamiltonian, basis=basis,
                     charge=charge, title=title,
                     multiplicity=multiplicity,
